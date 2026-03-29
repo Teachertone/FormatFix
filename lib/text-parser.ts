@@ -115,6 +115,7 @@ function isNumbered(line: string): { isNumbered: boolean; content: string } {
 }
 
 export function parseText(text: string): ParsedDocument {
+  console.log("[v0] Raw input text:", JSON.stringify(text))
   const lines = text.split('\n')
   const blocks: ParsedBlock[] = []
   let currentParagraph: string[] = []
