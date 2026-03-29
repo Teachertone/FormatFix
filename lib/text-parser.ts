@@ -84,9 +84,9 @@ function isHeading(line: string): { isHeading: boolean; level: 1 | 2 | 3; conten
 function isBullet(line: string): { isBullet: boolean; content: string } {
   const trimmed = line.trim()
   
-  // Dash bullets: "- item" (must have space after dash)
-  if (/^-\s+/.test(trimmed)) {
-    return { isBullet: true, content: trimmed.replace(/^-\s+/, '').trim() }
+  // Dash bullets: "- item" or "-item" (space optional)
+  if (/^-\s*/.test(trimmed)) {
+    return { isBullet: true, content: trimmed.replace(/^-\s*/, '').trim() }
   }
   
   // Bullet character: "• item" (with or without space)
@@ -94,9 +94,10 @@ function isBullet(line: string): { isBullet: boolean; content: string } {
     return { isBullet: true, content: trimmed.replace(/^•\s*/, '').trim() }
   }
   
-  // Asterisk bullets: "* item" (must have space after asterisk to distinguish from *italic*)
-  if (/^\*\s+/.test(trimmed)) {
-    return { isBullet: true, content: trimmed.replace(/^\*\s+/, '').trim() }
+  // Asterisk bullets: "* item" or "*item" (space optional)
+  // But be careful not to match *italic* text in the middle of a paragraph
+  if (/^\*\s*/.test(trimmed) && !trimmed.match(/^[^*].*\*.*[^*]$/)) {
+    return { isBullet: true, content: trimmed.replace(/^\*\s*/, '').trim() }
   }
   
   return { isBullet: false, content: trimmed }
