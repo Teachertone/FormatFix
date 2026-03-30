@@ -162,18 +162,21 @@ export function parseText(text: string): ParsedDocument {
     }
     
     // Check for numbered list
-    const numberedCheck = isNumbered(trimmed)
-    if (numberedCheck.isNumbered) {
-      flushParagraph()
-      const { content: cleanContent, emphasis } = detectEmphasis(numberedCheck.content)
-      blocks.push({
-        id: generateId(),
-        type: 'numbered',
-        content: cleanContent,
-        emphasis
-      })
-      continue
-    }
+// Check for numbered list
+const numberedCheck = isNumbered(trimmed)
+console.log("[v0] Checking line for numbered:", JSON.stringify(trimmed), "Result:", numberedCheck)
+if (numberedCheck.isNumbered) {
+  flushParagraph()
+  const { content: cleanContent, emphasis } = detectEmphasis(numberedCheck.content)
+  console.log("[v0] Adding numbered block:", cleanContent)
+  blocks.push({
+    id: generateId(),
+    type: 'numbered',
+    content: cleanContent,
+    emphasis
+  })
+  continue
+}
     
     // Check for heading (after bullet/numbered checks)
     const headingCheck = isHeading(trimmed)
