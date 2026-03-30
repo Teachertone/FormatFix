@@ -36,27 +36,53 @@ function convertHtmlToListItems(html: string): string {
 export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-  const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    // Try to get HTML first
-    const html = e.clipboardData.getData('text/html')
+const handlePaste = useCallback((e: React.ClipboardEvent) => {
+  // Get both formats
+  const html = e.clipboardData.getData('text/html')
+  const plainText = e.clipboardData.getData('text/plain')
+  
+  console.log('[v0] ===== PASTE EVENT =====')
+  console.log('[v0] Plain text:', plainText)
+  console.log('[v0] HTML:', html)
+  
+  // Try to extract list items from HTML
+  if (html) {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(html, 'text/html')
     
-    if (html) {
-      e.preventDefault()
-      // Convert HTML lists to markdown-style text
-      const converted = convertHtmlToListItems(html)
+    // Look for list items in various ways
+    const lis = doc.querySelectorAll('li')
+    console.log('[v0] Found li elements:', lis.length)
+    
+    if (lis.length > 0) {
+      const converted = Array.from(lis).map(li => `- ${li.textContent?.trim()}`).join('\n')
+      console.log('[v0] Converted HTML lists to:', converted)
       
-      // If we found list items, use them
-      if (converted.trim()) {
-        const existingText = value
-        const newText = existingText ? existingText + '\n\n' + converted : converted
-        onChange(newText)
-        return
-      }
+      const existingText = value
+      const newText = existingText ? existingText + '\n\n' + converted : converted
+      onChange(newText)
+      e.preventDefault()
+      return
     }
     
-    // Fall back to plain text (default behavior)
-    // Don't prevent default for plain text
-  }, [value, onChange])
+    // Also look for bullet characters in the HTML text
+    const bodyText = doc.body?.innerText || ''
+    const lines = bodyText.split('\n')
+    const bulletLines = lines.filter(line => /^[•*\-]\s/.test(line.trim()))
+    if (bulletLines.length > 0) {
+      console.log('[v0] Found bullet characters in HTML text:', bulletLines)
+      const converted = bulletLines.join('\n')
+      const existingText = value
+      const newText = existingText ? existingText + '\n\n' + converted : converted
+      onChange(newText)
+      e.preventDefault()
+      return
+    }
+  }
+  
+  // Fallback: let the default paste happen
+  console.log('[v0] No HTML lists found, using default paste')
+}, [value, onChange])
   
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
