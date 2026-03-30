@@ -40,31 +40,23 @@ const handlePaste = useCallback((e: React.ClipboardEvent) => {
   // Get all available formats
   const html = e.clipboardData.getData('text/html')
   const plainText = e.clipboardData.getData('text/plain')
-  const allTypes = e.clipboardData.types
   
   console.log('[v0] ===== PASTE EVENT =====')
-  console.log('[v0] Available types:', allTypes)
   console.log('[v0] Plain text:', JSON.stringify(plainText))
   console.log('[v0] HTML length:', html?.length || 0)
   
   if (html) {
-    console.log('[v0] HTML content:', html.substring(0, 500))
+    console.log('[v0] HTML snippet (first 800 chars):', html.substring(0, 800))
     const parser = new DOMParser()
     const doc = parser.parseFromString(html, 'text/html')
     
-    // Check for different list structures
+    // Look for list items in various ways
     const lis = doc.querySelectorAll('li')
     console.log('[v0] Found li elements:', lis.length)
     
-    // Also check for paragraphs with bullet characters
-    const bodyText = doc.body?.innerText || ''
-    const hasBulletChars = /[•*\-]\s/.test(bodyText)
-    console.log('[v0] Body text has bullet chars:', hasBulletChars)
-    console.log('[v0] Body text first 500 chars:', bodyText.substring(0, 500))
-    
     if (lis.length > 0) {
       const converted = Array.from(lis).map(li => `- ${li.textContent?.trim()}`).join('\n')
-      console.log('[v0] Converted from li tags:', converted)
+      console.log('[v0] Converted to:', converted)
       const existingText = value
       const newText = existingText ? existingText + '\n\n' + converted : converted
       onChange(newText)
@@ -72,7 +64,8 @@ const handlePaste = useCallback((e: React.ClipboardEvent) => {
       return
     }
     
-    // If no li tags, try to extract bullet lines from inner text
+    // Also check for paragraphs with bullet characters
+    const bodyText = doc.body?.innerText || ''
     const lines = bodyText.split('\n')
     const bulletLines = lines.filter(line => /^[•*\-]\s/.test(line.trim()))
     if (bulletLines.length > 0) {
@@ -86,7 +79,7 @@ const handlePaste = useCallback((e: React.ClipboardEvent) => {
     }
   }
   
-  console.log('[v0] No list structure found, using default paste')
+  console.log('[v0] No list structure found')
 }, [value, onChange])
   
   const handleDrop = useCallback((e: React.DragEvent) => {
