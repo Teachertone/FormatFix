@@ -11,8 +11,52 @@ interface TextInputProps {
   onLoadExample: () => void
 }
 
+// Helper function to convert HTML list items to markdown-style bullet points
+function convertHtmlToListItems(html: string): string {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  const lists = doc.querySelectorAll('ul, ol')
+  
+  let result = ''
+  lists.forEach(list => {
+    const items = list.querySelectorAll('li')
+    items.forEach(item => {
+      if (list.tagName === 'UL') {
+        result += `- ${item.textContent?.trim()}\n`
+      } else if (list.tagName === 'OL') {
+        result += `1. ${item.textContent?.trim()}\n`
+      }
+    })
+    result += '\n'
+  })
+  
+  return result
+}
+
 export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    // Try to get HTML first
+    const html = e.clipboardData.getData('text/html')
+    
+    if (html) {
+      e.preventDefault()
+      // Convert HTML lists to markdown-style text
+      const converted = convertHtmlToListItems(html)
+      
+      // If we found list items, use them
+      if (converted.trim()) {
+        const existingText = value
+        const newText = existingText ? existingText + '\n\n' + converted : converted
+        onChange(newText)
+        return
+      }
+    }
+    
+    // Fall back to plain text (default behavior)
+    // Don't prevent default for plain text
+  }, [value, onChange])
   
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -86,6 +130,7 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
         <Textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onPaste={handlePaste}
           placeholder="Paste text from ChatGPT, DeepSeek, Claude, or any other AI...
 
 The app will automatically detect:
