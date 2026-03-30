@@ -37,91 +37,21 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   
 const handlePaste = useCallback((e: React.ClipboardEvent) => {
+  // Get everything
   const html = e.clipboardData.getData('text/html')
   const plainText = e.clipboardData.getData('text/plain')
   
   console.log('[v0] ===== PASTE EVENT =====')
-  console.log('[v0] Plain text length:', plainText?.length || 0)
-  console.log('[v0] HTML length:', html?.length || 0)
+  console.log('[v0] Plain text (first 500 chars):', plainText?.substring(0, 500))
+  console.log('[v0] HTML (FULL):', html)
   
-  if (html) {
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(html, 'text/html')
-    
-    // Function to convert HTML nodes to markdown-style text
-    function convertNodeToMarkdown(node: Node): string {
-      if (node.nodeType === Node.TEXT_NODE) {
-        return node.textContent || ''
-      }
-      
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const element = node as Element
-        const tagName = element.tagName.toLowerCase()
-        
-        // Handle headings
-        if (tagName.match(/^h[1-6]$/)) {
-          return `\n${'#'.repeat(parseInt(tagName[1]))} ${element.textContent?.trim()}\n`
-        }
-        
-        // Handle list items
-        if (tagName === 'li') {
-          return `- ${element.textContent?.trim()}\n`
-        }
-        
-        // Handle paragraphs
-        if (tagName === 'p') {
-          return `${element.textContent?.trim()}\n\n`
-        }
-        
-        // Handle strong/bold
-        if (tagName === 'strong' || tagName === 'b') {
-          return `**${element.textContent?.trim()}**`
-        }
-        
-        // Handle emphasis/italic
-        if (tagName === 'em' || tagName === 'i') {
-          return `*${element.textContent?.trim()}*`
-        }
-        
-        // Recursively process child nodes
-        let result = ''
-        for (const child of Array.from(element.childNodes)) {
-          result += convertNodeToMarkdown(child)
-        }
-        
-        // Add line breaks for block elements
-        if (['div', 'p', 'li', 'ul', 'ol', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tagName)) {
-          result += '\n'
-        }
-        
-        return result
-      }
-      
-      return ''
-    }
-    
-    // Convert the entire body
-    let converted = convertNodeToMarkdown(doc.body)
-    
-    // Clean up excessive line breaks
-    converted = converted.replace(/\n{3,}/g, '\n\n').trim()
-    
-    console.log('[v0] Converted full HTML to markdown:', converted.substring(0, 500))
-    
-    if (converted) {
-      const existingText = value
-      const newText = existingText ? existingText + '\n\n' + converted : converted
-      onChange(newText)
-      e.preventDefault()
-      return
-    }
-  }
-  
-  // Fallback to plain text
+  // For now, just use plain text so we can see what's happening
   if (plainText) {
     onChange(plainText)
   }
-}, [value, onChange])
+  
+  e.preventDefault()
+}, [onChange])
   
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
