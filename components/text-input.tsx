@@ -37,21 +37,78 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   
 const handlePaste = useCallback((e: React.ClipboardEvent) => {
-  // Get everything
   const html = e.clipboardData.getData('text/html')
   const plainText = e.clipboardData.getData('text/plain')
   
   console.log('[v0] ===== PASTE EVENT =====')
-  console.log('[v0] Plain text (first 500 chars):', plainText?.substring(0, 500))
-  console.log('[v0] HTML (FULL):', html)
   
-  // For now, just use plain text so we can see what's happening
+  if (html) {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(html, 'text/html')
+    
+    // Recursive function to convert HTML nodes to markdown
+    function htmlToMarkdown(node: Node): string {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.textContent || ''
+      }
+      
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as Element
+        const tag = el.tagName.toLowerCase()
+        
+        // Get the inner content first
+        let inner = ''
+        for (const child of Array.from(el.childNodes)) {
+          inner += htmlToMarkdown(child)
+        }
+        
+        // Apply formatting based on tag
+        switch (tag) {
+          case 'h1': return `\n# ${inner.trim()}\n\n`
+          case 'h2': return `\n## ${inner.trim()}\n\n`
+          case 'h3': return `\n### ${inner.trim()}\n\n`
+          case 'h4': return `\n#### ${inner.trim()}\n\n`
+          case 'h5': return `\n##### ${inner.trim()}\n\n`
+          case 'h6': return `\n###### ${inner.trim()}\n\n`
+          case 'p': return `${inner.trim()}\n\n`
+          case 'li': return `- ${inner.trim()}\n`
+          case 'strong':
+          case 'b': return `**${inner}**`
+          case 'em':
+          case 'i': return `*${inner}*`
+          case 'ul':
+          case 'ol': return `\n${inner}\n`
+          case 'br': return '\n'
+          case 'div': return `${inner}\n`
+          default: return inner
+        }
+      }
+      
+      return ''
+    }
+    
+    // Convert the entire body
+    let markdown = htmlToMarkdown(doc.body)
+    
+    // Clean up excessive line breaks
+    markdown = markdown.replace(/\n{3,}/g, '\n\n').trim()
+    
+    console.log('[v0] Full markdown output:', markdown)
+    
+    if (markdown) {
+      const existingText = value
+      const newText = existingText ? existingText + '\n\n' + markdown : markdown
+      onChange(newText)
+      e.preventDefault()
+      return
+    }
+  }
+  
+  // Fallback to plain text
   if (plainText) {
     onChange(plainText)
   }
-  
-  e.preventDefault()
-}, [onChange])
+}, [value, onChange])
   
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
