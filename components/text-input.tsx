@@ -68,13 +68,13 @@ const handlePaste = useCallback((e: React.ClipboardEvent) => {
       case 'h5': return `\n##### ${inner.trim()}\n\n`
       case 'h6': return `\n###### ${inner.trim()}\n\n`
       case 'p': return `${inner.trim()}\n\n`
-      case 'li': 
-        // Check if parent is <ol> (ordered list) or <ul> (unordered)
-        const parent = el.parentElement
-        if (parent && parent.tagName.toLowerCase() === 'ol') {
-          return `1. ${inner.trim()}\n`
-        }
-        return `- ${inner.trim()}\n`
+     case 'li': 
+  console.log("[v0] LI extracted (inner):", inner)  // <-- ADD THIS
+  const parent = el.parentElement
+  if (parent && parent.tagName.toLowerCase() === 'ol') {
+    return `1. ${inner.trim()}\n`
+  }
+  return `- ${inner.trim()}\n`
       case 'strong':
       case 'b': return `**${inner}**`
       case 'em':
