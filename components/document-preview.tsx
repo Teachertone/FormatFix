@@ -58,7 +58,9 @@ export function DocumentPreview({ document, template, styleId, colorHeadings, on
   }
   
   const renderBlock = (block: ParsedBlock, index: number) => {
+    console.log("[v0] Before applyStyle:", block.content)
     const styledContent = applyStyle(block.content, styleId)
+    console.log("[v0] After applyStyle:", styledContent)
     const isEditing = editingBlockId === block.id
     
     const baseClasses = "cursor-pointer rounded-sm px-2 py-1 -mx-2 transition-colors hover:bg-muted/50"
