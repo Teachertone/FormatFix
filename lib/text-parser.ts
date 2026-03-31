@@ -195,6 +195,7 @@ if (numberedCheck.isNumbered) {
 
 // Parse inline formatting like *italic*, _italic_, **bold**, __bold__
 export function parseInlineFormatting(text: string): Array<{ text: string; bold?: boolean; italic?: boolean }> {
+  console.log("[v0] parseInlineFormatting input:", text)
   const segments: Array<{ text: string; bold?: boolean; italic?: boolean }> = []
   
   // Regex to match formatting patterns:

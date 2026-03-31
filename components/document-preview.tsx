@@ -42,7 +42,9 @@ export function DocumentPreview({ document, template, styleId, colorHeadings, on
   
   // Render text with inline formatting
   const renderFormattedText = (text: string) => {
-    const segments = parseInlineFormatting(text)
+  console.log("[v0] renderFormattedText input:", text)
+  const segments = parseInlineFormatting(text)
+  console.log("[v0] renderFormattedText segments:", segments)
     return segments.map((segment, i) => {
       if (segment.bold && segment.italic) {
         return <strong key={i}><em>{segment.text}</em></strong>
@@ -61,6 +63,7 @@ export function DocumentPreview({ document, template, styleId, colorHeadings, on
     console.log("[v0] Before applyStyle:", block.content)
     const styledContent = applyStyle(block.content, styleId)
     console.log("[v0] After applyStyle:", styledContent)
+    
     const isEditing = editingBlockId === block.id
     
     const baseClasses = "cursor-pointer rounded-sm px-2 py-1 -mx-2 transition-colors hover:bg-muted/50"
