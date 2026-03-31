@@ -38,9 +38,8 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
   
 const handlePaste = useCallback((e: React.ClipboardEvent) => {
   const html = e.clipboardData.getData('text/html')
-  const plainText = e.clipboardData.getData('text/plain')
-  
-  console.log('[v0] ===== PASTE EVENT =====')
+  console.log('[v0] ===== FULL HTML =====')
+  console.log('[v0] HTML:', html)
   
   if (html) {
     const parser = new DOMParser()
