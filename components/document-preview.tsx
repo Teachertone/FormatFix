@@ -188,13 +188,22 @@ export function DocumentPreview({ document, template, styleId, colorHeadings, on
   }
   
   // Group blocks for list rendering
-  const renderBlocks = () => {
-    const elements: React.ReactNode[] = []
-    let currentList: { type: 'bullet' | 'numbered'; blocks: ParsedBlock[] } | null = null
-    
-    console.log("[v0] Rendering blocks:", document.blocks.map(b => ({ type: b.type, content: b.content.substring(0, 30) })))
-    
+const renderBlocks = () => {
+  const elements: React.ReactNode[] = []
+  let currentList: { type: 'bullet' | 'numbered'; blocks: ParsedBlock[] } | null = null
+  
+  // Original log
+  console.log("[v0] Rendering blocks:", document.blocks.map(b => ({ type: b.type, content: b.content.substring(0, 30) })))
+  
+  // New logs
+  console.log("[v0] renderBlocks - document.blocks:", document.blocks.map(b => ({ 
+    type: b.type, 
+    content: b.content.substring(0, 30) 
+  })))
+  
     document.blocks.forEach((block, index) => {
+    console.log("[v0] Processing block:", block.type, block.content.substring(0, 30))
+
       if (block.type === 'bullet' || block.type === 'numbered') {
         if (currentList && currentList.type === block.type) {
           currentList.blocks.push(block)
