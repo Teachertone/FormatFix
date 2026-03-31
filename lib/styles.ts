@@ -166,15 +166,14 @@ export function applyStyle(text: string, styleId: string): string {
   // Apply word replacements
   if (style.transforms.formalReplacements) {
     for (const [from, to] of style.transforms.formalReplacements) {
-      // Case-insensitive replacement preserving case
       // Only match whole words that are NOT followed by an apostrophe
-const regex = new RegExp(`\\b${from}\\b(?!')`, 'gi')
-result = result.replace(regex, (match) => {
-  if (match[0] === match[0].toUpperCase()) {
-    return to.charAt(0).toUpperCase() + to.slice(1)
-  }
-  return to
-})
+      const regex = new RegExp(`\\b${from}\\b(?!')`, 'gi')
+      result = result.replace(regex, (match) => {
+        if (match[0] === match[0].toUpperCase()) {
+          return to.charAt(0).toUpperCase() + to.slice(1)
+        }
+        return to
+      })
     }
   }
   
