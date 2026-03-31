@@ -145,11 +145,19 @@ export function parseText(text: string): ParsedDocument {
       continue
     }
     
-  // Check for bullet FIRST
+// Check for bullet FIRST
 const bulletCheck = isBullet(trimmed)
 console.log("[v0] Checking line for bullet:", JSON.stringify(trimmed), "Result:", bulletCheck)
 if (bulletCheck.isBullet) {
-  // ... bullet handling
+  flushParagraph()
+  const { content: cleanContent, emphasis } = detectEmphasis(bulletCheck.content)
+  console.log("[v0] Adding bullet block:", cleanContent)
+  blocks.push({
+    id: generateId(),
+    type: 'bullet',
+    content: cleanContent,
+    emphasis
+  })
   continue
 }
 
