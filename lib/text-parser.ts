@@ -145,26 +145,17 @@ export function parseText(text: string): ParsedDocument {
       continue
     }
     
-    // Check for bullet FIRST (before heading, since "- Item" could match title-case)
-    const bulletCheck = isBullet(trimmed)
-    console.log("[v0] Checking line for bullet:", JSON.stringify(trimmed), "Result:", bulletCheck)
-    if (bulletCheck.isBullet) {
-      flushParagraph()
-      const { content: cleanContent, emphasis } = detectEmphasis(bulletCheck.content)
-      console.log("[v0] Adding bullet block:", cleanContent)
-      blocks.push({
-        id: generateId(),
-        type: 'bullet',
-        content: cleanContent,
-        emphasis
-      })
-      continue
-    }
-    
-    // Check for numbered list
+  // Check for bullet FIRST
+const bulletCheck = isBullet(trimmed)
+console.log("[v0] Checking line for bullet:", JSON.stringify(trimmed), "Result:", bulletCheck)
+if (bulletCheck.isBullet) {
+  // ... bullet handling
+  continue
+}
+
 // Check for numbered list
 const numberedCheck = isNumbered(trimmed)
-console.log("[v0] Checking line for numbered:", JSON.stringify(trimmed), "Result:", numberedCheck)
+console.log("[v0] Checking line for numbered:", JSON.stringify(trimmed), "Result:", numberedCheck)  // <-- ADD THIS
 if (numberedCheck.isNumbered) {
   flushParagraph()
   const { content: cleanContent, emphasis } = detectEmphasis(numberedCheck.content)
