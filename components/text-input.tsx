@@ -46,7 +46,7 @@ const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const parser = new DOMParser()
     const doc = parser.parseFromString(html, 'text/html')
     
-    // Recursive function to convert HTML nodes to markdown
+    // Function to convert HTML nodes to markdown
     function htmlToMarkdown(node: Node): string {
       if (node.nodeType === Node.TEXT_NODE) {
         return node.textContent || ''
@@ -56,13 +56,11 @@ const handlePaste = useCallback((e: React.ClipboardEvent) => {
         const el = node as Element
         const tag = el.tagName.toLowerCase()
         
-        // Get the inner content first
         let inner = ''
         for (const child of Array.from(el.childNodes)) {
           inner += htmlToMarkdown(child)
         }
         
-        // Apply formatting based on tag
         switch (tag) {
           case 'h1': return `\n# ${inner.trim()}\n\n`
           case 'h2': return `\n## ${inner.trim()}\n\n`
@@ -83,14 +81,10 @@ const handlePaste = useCallback((e: React.ClipboardEvent) => {
           default: return inner
         }
       }
-      
       return ''
     }
     
-    // Convert the entire body
     let markdown = htmlToMarkdown(doc.body)
-    
-    // Clean up excessive line breaks
     markdown = markdown.replace(/\n{3,}/g, '\n\n').trim()
     
     console.log('[v0] Full markdown output:', markdown)
@@ -99,12 +93,12 @@ const handlePaste = useCallback((e: React.ClipboardEvent) => {
       const existingText = value
       const newText = existingText ? existingText + '\n\n' + markdown : markdown
       onChange(newText)
-      e.preventDefault()
-      return
+      e.preventDefault()  // <-- THIS PREVENTS DUPLICATES
+      return              // <-- EXIT, DON'T PROCESS PLAIN TEXT
     }
   }
   
-  // Fallback to plain text
+  // Fallback: if no HTML or conversion failed, use plain text
   if (plainText) {
     onChange(plainText)
   }
