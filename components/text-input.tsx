@@ -47,42 +47,48 @@ const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const doc = parser.parseFromString(html, 'text/html')
     
     // Function to convert HTML nodes to markdown
-    function htmlToMarkdown(node: Node): string {
-      if (node.nodeType === Node.TEXT_NODE) {
-        return node.textContent || ''
-      }
-      
-      if (node.nodeType === Node.ELEMENT_NODE) {
-        const el = node as Element
-        const tag = el.tagName.toLowerCase()
-        
-        let inner = ''
-        for (const child of Array.from(el.childNodes)) {
-          inner += htmlToMarkdown(child)
-        }
-        
-        switch (tag) {
-          case 'h1': return `\n# ${inner.trim()}\n\n`
-          case 'h2': return `\n## ${inner.trim()}\n\n`
-          case 'h3': return `\n### ${inner.trim()}\n\n`
-          case 'h4': return `\n#### ${inner.trim()}\n\n`
-          case 'h5': return `\n##### ${inner.trim()}\n\n`
-          case 'h6': return `\n###### ${inner.trim()}\n\n`
-          case 'p': return `${inner.trim()}\n\n`
-          case 'li': return `- ${inner.trim()}\n`
-          case 'strong':
-          case 'b': return `**${inner}**`
-          case 'em':
-          case 'i': return `*${inner}*`
-          case 'ul':
-          case 'ol': return `\n${inner}\n`
-          case 'br': return '\n'
-          case 'div': return `${inner}\n`
-          default: return inner
-        }
-      }
-      return ''
+   function htmlToMarkdown(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent || ''
+  }
+  
+  if (node.nodeType === Node.ELEMENT_NODE) {
+    const el = node as Element
+    const tag = el.tagName.toLowerCase()
+    
+    let inner = ''
+    for (const child of Array.from(el.childNodes)) {
+      inner += htmlToMarkdown(child)
     }
+    
+    switch (tag) {
+      case 'h1': return `\n# ${inner.trim()}\n\n`
+      case 'h2': return `\n## ${inner.trim()}\n\n`
+      case 'h3': return `\n### ${inner.trim()}\n\n`
+      case 'h4': return `\n#### ${inner.trim()}\n\n`
+      case 'h5': return `\n##### ${inner.trim()}\n\n`
+      case 'h6': return `\n###### ${inner.trim()}\n\n`
+      case 'p': return `${inner.trim()}\n\n`
+      case 'li': 
+        // Check if parent is <ol> (ordered list) or <ul> (unordered)
+        const parent = el.parentElement
+        if (parent && parent.tagName.toLowerCase() === 'ol') {
+          return `1. ${inner.trim()}\n`
+        }
+        return `- ${inner.trim()}\n`
+      case 'strong':
+      case 'b': return `**${inner}**`
+      case 'em':
+      case 'i': return `*${inner}*`
+      case 'ul':
+      case 'ol': return `\n${inner}\n`
+      case 'br': return '\n'
+      case 'div': return `${inner}\n`
+      default: return inner
+    }
+  }
+  return ''
+}
     
     let markdown = htmlToMarkdown(doc.body)
     markdown = markdown.replace(/\n{3,}/g, '\n\n').trim()
