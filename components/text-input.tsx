@@ -38,6 +38,7 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
   
 const handlePaste = useCallback((e: React.ClipboardEvent) => {
   const html = e.clipboardData.getData('text/html')
+  const plainText = e.clipboardData.getData('text/plain')
   console.log('[v0] ===== FULL HTML =====')
   console.log('[v0] HTML:', html)
   
@@ -81,6 +82,18 @@ const handlePaste = useCallback((e: React.ClipboardEvent) => {
       case 'i': return `*${inner}*`
       case 'ul':
       case 'ol': return `\n${inner}\n`
+      case 'table':
+        const rows: string[] = []
+        const trs = el.querySelectorAll('tr')
+        trs.forEach((tr, i) => {
+          const cells = tr.querySelectorAll('th, td')
+          const rowCells = Array.from(cells).map(cell => cell.textContent?.trim() || '')
+          rows.push(`| ${rowCells.join(' | ')} |`)
+          if (i === 0 && tr.querySelectorAll('th').length > 0) {
+            rows.push(`|${' --- |'.repeat(rowCells.length)}`)
+          }
+        })
+        return `\n${rows.join('\n')}\n\n`
       case 'br': return '\n'
       case 'div': return `${inner}\n`
       default: return inner
