@@ -123,6 +123,7 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
       
       <div className="max-h-[500px] overflow-y-auto px-6 py-6">
         <div className="prose prose-sm max-w-none">
+          console.log("[v0] styledMarkdown before ReactMarkdown:", styledMarkdown)
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={components}
