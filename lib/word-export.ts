@@ -28,13 +28,10 @@ function parseMarkdownTable(content: string): { isTable: boolean; rows: string[]
     
     const cells = trimmed.split('|').filter(cell => {
       const clean = cell.trim()
-      return clean !== '' && clean !== '---' && !/^\-+$/.test(clean)
+      return clean !== '' && clean !== '---' && !/^[\-\:]+$/.test(clean)
     })
     
     if (cells.length === 0) continue
-    
-    // Skip separator rows (all dashes)
-    if (cells.every(cell => /^[\-\:]+$/.test(cell.trim()))) continue
     
     tableRows.push(cells)
   }
