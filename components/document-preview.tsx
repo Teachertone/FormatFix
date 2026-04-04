@@ -108,7 +108,8 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
       </div>
     )
   }
-  
+  console.log("[v0] Using ReactMarkdown. Markdown text:", styledMarkdown.substring(0, 200))
+
   return (
     <div className="rounded-lg border border-border bg-card shadow-sm">
       <div className="border-b border-border bg-muted/30 px-6 py-4">
