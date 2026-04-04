@@ -7,6 +7,18 @@ interface GenerateOptions {
   templateName: string
 }
 
+// Helper to download blob as file
+export function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
 // Parse markdown table from a string
 function parseMarkdownTable(content: string): { isTable: boolean; rows: string[][] } {
   const lines = content.split('\n')
