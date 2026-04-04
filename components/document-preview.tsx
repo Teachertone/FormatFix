@@ -1,10 +1,8 @@
 'use client'
 
-import { useCallback, useState } from 'react'
 import type { ParsedDocument } from '@/lib/text-parser'
 import type { Template } from '@/lib/templates'
 import { applyStyle } from '@/lib/styles'
-import { cn } from '@/lib/utils'
 
 interface DocumentPreviewProps {
   document: ParsedDocument
@@ -35,22 +33,20 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
   
   const styledMarkdown = applyStyle(markdownText, styleId)
   
-  // Improved table parser
+  // Simple table parser
   function renderMarkdown(content: string) {
     const lines = content.split('\n')
-    const result: React.ReactNode[] = []
+    const elements: React.ReactNode[] = []
     let inTable = false
     let tableRows: string[][] = []
     
-    for (const line of lines) {
-      const trimmed = line.trim()
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim()
       
-      // Check if line is a table row (starts and ends with |)
-      if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
-        const cells = trimmed.split('|').filter(cell => {
+      if (line.startsWith('|') && line.endsWith('|')) {
+        const cells = line.split('|').filter(cell => {
           const clean = cell.trim()
-          // Skip empty cells and separator rows (contain only dashes)
-          return clean !== '' && !/^\-+$/.test(clean)
+          return clean !== '' && clean !== '---'
         })
         
         if (cells.length > 0) {
@@ -62,19 +58,18 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
         }
       } else {
         if (inTable && tableRows.length > 0) {
-          // Render the table
-          result.push(
-            <div key={`table-${result.length}`} className="overflow-x-auto my-4">
+          elements.push(
+            <div key={`table-${elements.length}`} className="overflow-x-auto my-4">
               <table className="min-w-full border-collapse border border-border">
                 <tbody>
-                  {tableRows.map((row, i) => (
-                    <tr key={i}>
-                      {row.map((cell, j) => (
-                        <td key={j} className="border border-border px-3 py-2">
+                  {tableRows.map((row, rowIdx) => (
+                    <tr key={rowIdx}>
+                      {row.map((cell, cellIdx) => (
+                        <td key={cellIdx} className="border border-border px-3 py-2">
                           {cell.trim()}
                         </td>
                       ))}
-                    </table>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -84,34 +79,33 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
           tableRows = []
         }
         
-        // Render non-table content
-        if (trimmed.startsWith('# ')) {
-          result.push(<h1 key={result.length} className="text-2xl font-bold mb-4">{trimmed.slice(2)}</h1>)
-        } else if (trimmed.startsWith('## ')) {
-          result.push(<h2 key={result.length} className="text-xl font-semibold mb-3">{trimmed.slice(3)}</h2>)
-        } else if (trimmed.startsWith('### ')) {
-          result.push(<h3 key={result.length} className="text-lg font-medium mb-2">{trimmed.slice(4)}</h3>)
-        } else if (trimmed.startsWith('- ')) {
-          result.push(<li key={result.length} className="ml-4 list-disc">{trimmed.slice(2)}</li>)
-        } else if (trimmed.match(/^\d+\. /)) {
-          result.push(<li key={result.length} className="ml-4 list-decimal">{trimmed.replace(/^\d+\. /, '')}</li>)
-        } else if (trimmed) {
-          result.push(<p key={result.length} className="text-sm leading-relaxed mb-2">{trimmed}</p>)
+        if (line.startsWith('# ')) {
+          elements.push(<h1 key={elements.length} className="text-2xl font-bold mb-4">{line.slice(2)}</h1>)
+        } else if (line.startsWith('## ')) {
+          elements.push(<h2 key={elements.length} className="text-xl font-semibold mb-3">{line.slice(3)}</h2>)
+        } else if (line.startsWith('### ')) {
+          elements.push(<h3 key={elements.length} className="text-lg font-medium mb-2">{line.slice(4)}</h3>)
+        } else if (line.startsWith('- ')) {
+          elements.push(<li key={elements.length} className="ml-4 list-disc">{line.slice(2)}</li>)
+        } else if (line.match(/^\d+\. /)) {
+          elements.push(<li key={elements.length} className="ml-4 list-decimal">{line.replace(/^\d+\. /, '')}</li>)
+        } else if (line) {
+          elements.push(<p key={elements.length} className="text-sm leading-relaxed mb-2">{line}</p>)
         } else {
-          result.push(<br key={result.length} />)
+          elements.push(<br key={elements.length} />)
         }
       }
     }
     
     if (inTable && tableRows.length > 0) {
-      result.push(
-        <div key={`table-${result.length}`} className="overflow-x-auto my-4">
+      elements.push(
+        <div key={`table-${elements.length}`} className="overflow-x-auto my-4">
           <table className="min-w-full border-collapse border border-border">
             <tbody>
-              {tableRows.map((row, i) => (
-                <tr key={i}>
-                  {row.map((cell, j) => (
-                    <td key={j} className="border border-border px-3 py-2">
+              {tableRows.map((row, rowIdx) => (
+                <tr key={rowIdx}>
+                  {row.map((cell, cellIdx) => (
+                    <td key={cellIdx} className="border border-border px-3 py-2">
                       {cell.trim()}
                     </td>
                   ))}
@@ -123,7 +117,7 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
       )
     }
     
-    return result
+    return elements
   }
   
   if (document.blocks.length === 0) {
