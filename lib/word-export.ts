@@ -1,170 +1,118 @@
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, convertInchesToTwip } from 'docx'
-import { parseInlineFormatting, type ParsedBlock } from './text-parser'
-import { applyStyle } from './styles'
+import { Packer, Document, Paragraph, TextRun, Table, TableRow, TableCell, BorderStyle, WidthType } from 'docx'
+import type { ParsedBlock } from './text-parser'
 
-// Create TextRuns with inline formatting support
-function createFormattedTextRuns(text: string, baseSize: number, baseOptions?: { bold?: boolean; italics?: boolean }): TextRun[] {
-  const segments = parseInlineFormatting(text)
-  return segments.map(segment => new TextRun({
-    text: segment.text,
-    size: baseSize,
-    font: 'Calibri',
-    bold: segment.bold || baseOptions?.bold,
-    italics: segment.italic || baseOptions?.italics
-  }))
-}
-
-export interface ExportOptions {
+interface GenerateOptions {
   blocks: ParsedBlock[]
   styleId: string
   templateName: string
 }
 
-export async function generateWordDocument(options: ExportOptions): Promise<Blob> {
-  const { blocks, styleId, templateName } = options
+// Helper to detect and parse markdown tables
+function parseMarkdownTables(text: string): { isTable: boolean; rows: string[][] } {
+  const lines = text.split('\n')
+  const tableRows: string[][] = []
+  let inTable = false
   
-  const children: Paragraph[] = []
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      const cells = trimmed.split('|').filter(cell => {
+        const clean = cell.trim()
+        return clean !== '' && clean !== '---'
+      })
+      if (cells.length > 0) {
+        inTable = true
+        tableRows.push(cells)
+      }
+    } else if (inTable) {
+      break
+    }
+  }
   
-  // Add title
-  children.push(
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: templateName,
-          bold: true,
-          size: 32, // 16pt
-          font: 'Calibri'
-        })
-      ],
-      heading: HeadingLevel.TITLE,
-      spacing: { after: 400 }
-    })
-  )
-  
-  let bulletIndex = 0
-  let numberedIndex = 0
+  return { isTable: inTable && tableRows.length > 0, rows: tableRows }
+}
+
+export async function generateWordDocument({ blocks, styleId, templateName }: GenerateOptions): Promise<Blob> {
+  const children: any[] = []
   
   for (const block of blocks) {
-    const styledContent = applyStyle(block.content, styleId)
+    // Check if block contains a markdown table
+    const { isTable, rows } = parseMarkdownTables(block.content)
     
-    switch (block.type) {
-      case 'heading1':
-        children.push(
-          new Paragraph({
-            children: createFormattedTextRuns(styledContent, 28, { bold: true }),
-            heading: HeadingLevel.HEADING_1,
-            spacing: { before: 400, after: 200 }
-          })
-        )
-        bulletIndex = 0
-        numberedIndex = 0
-        break
-        
-      case 'heading2':
-        children.push(
-          new Paragraph({
-            children: createFormattedTextRuns(styledContent, 24, { bold: true }),
-            heading: HeadingLevel.HEADING_2,
-            spacing: { before: 300, after: 150 }
-          })
-        )
-        bulletIndex = 0
-        numberedIndex = 0
-        break
-        
-      case 'heading3':
-        children.push(
-          new Paragraph({
-            children: createFormattedTextRuns(styledContent, 22, { bold: true }),
-            heading: HeadingLevel.HEADING_3,
-            spacing: { before: 250, after: 120 }
-          })
-        )
-        bulletIndex = 0
-        numberedIndex = 0
-        break
-        
-      case 'bullet':
-        children.push(
-          new Paragraph({
-            children: createFormattedTextRuns(styledContent, 22, {
-              bold: block.emphasis === 'bold' || block.emphasis === 'bold-italic',
-              italics: block.emphasis === 'italic' || block.emphasis === 'bold-italic'
-            }),
-            bullet: {
-              level: 0
+    if (isTable && rows.length > 0) {
+      // Create a Word table
+      const tableRows = rows.map(row => {
+        const cells = row.map(cell => 
+          new TableCell({
+            children: [new Paragraph({ children: [new TextRun(cell.trim())] })],
+            borders: {
+              top: { style: BorderStyle.SINGLE, size: 1 },
+              bottom: { style: BorderStyle.SINGLE, size: 1 },
+              left: { style: BorderStyle.SINGLE, size: 1 },
+              right: { style: BorderStyle.SINGLE, size: 1 },
             },
-            spacing: { before: 100, after: 100 }
           })
         )
-        bulletIndex++
-        break
-        
-      case 'numbered':
-        numberedIndex++
-        children.push(
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: `${numberedIndex}. `,
-                size: 22,
-                font: 'Calibri'
-              }),
-              ...createFormattedTextRuns(styledContent, 22, {
-                bold: block.emphasis === 'bold' || block.emphasis === 'bold-italic',
-                italics: block.emphasis === 'italic' || block.emphasis === 'bold-italic'
-              })
-            ],
-            spacing: { before: 100, after: 100 },
-            indent: { left: convertInchesToTwip(0.25) }
-          })
-        )
-        break
-        
-      default: // paragraph
-        children.push(
-          new Paragraph({
-            children: createFormattedTextRuns(styledContent, 22, {
-              bold: block.emphasis === 'bold' || block.emphasis === 'bold-italic',
-              italics: block.emphasis === 'italic' || block.emphasis === 'bold-italic'
-            }),
-            spacing: { before: 100, after: 200 },
-            alignment: AlignmentType.JUSTIFIED
-          })
-        )
-        bulletIndex = 0
-        numberedIndex = 0
+        return new TableRow({ children: cells })
+      })
+      
+      children.push(new Table({
+        rows: tableRows,
+        width: { size: 100, type: WidthType.PERCENTAGE },
+      }))
+      children.push(new Paragraph({ text: '' })) // spacing
+    } else {
+      // Handle regular blocks
+      switch (block.type) {
+        case 'heading1':
+          children.push(new Paragraph({
+            text: block.content,
+            heading: 'Heading1',
+            spacing: { before: 240, after: 120 },
+          }))
+          break
+        case 'heading2':
+          children.push(new Paragraph({
+            text: block.content,
+            heading: 'Heading2',
+            spacing: { before: 200, after: 80 },
+          }))
+          break
+        case 'heading3':
+          children.push(new Paragraph({
+            text: block.content,
+            heading: 'Heading3',
+            spacing: { before: 160, after: 60 },
+          }))
+          break
+        case 'bullet':
+          children.push(new Paragraph({
+            text: block.content,
+            bullet: { level: 0 },
+          }))
+          break
+        case 'numbered':
+          children.push(new Paragraph({
+            text: block.content,
+            numbering: { reference: "numbering-ref", level: 0 },
+          }))
+          break
+        default:
+          children.push(new Paragraph({
+            text: block.content,
+            spacing: { after: 120 },
+          }))
+      }
     }
   }
   
   const doc = new Document({
-    sections: [
-      {
-        properties: {
-          page: {
-            margin: {
-              top: convertInchesToTwip(1),
-              right: convertInchesToTwip(1),
-              bottom: convertInchesToTwip(1),
-              left: convertInchesToTwip(1)
-            }
-          }
-        },
-        children
-      }
-    ]
+    sections: [{
+      properties: {},
+      children,
+    }],
   })
   
-  return Packer.toBlob(doc)
-}
-
-export function downloadBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  const blob = await Packer.toBlob(doc)
+  return blob
 }
