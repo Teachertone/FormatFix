@@ -27,21 +27,33 @@ function parseMarkdownTable(content: string): { isTable: boolean; rows: string[]
   
   for (const line of lines) {
     const trimmed = line.trim()
+    
+    // Check if line is a table row (starts with | and ends with |)
     if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
-      const cells = trimmed.split('|').filter(cell => {
-        const clean = cell.trim()
-        return clean !== '' && clean !== '---' && !/^\-+$/.test(clean)
-      })
-      if (cells.length > 0) {
-        inTable = true
+      // Split by | and clean each cell
+      const cells = trimmed.split('|').map(cell => cell.trim()).filter(cell => cell !== '')
+      
+      // Skip the separator row (contains only --- or dashes)
+      const isSeparatorRow = cells.every(cell => /^\-+$/.test(cell))
+      
+      if (!isSeparatorRow && cells.length > 0) {
+        if (!inTable) {
+          inTable = true
+          tableRows.length = 0 // Reset
+        }
         tableRows.push(cells)
       }
-    } else if (inTable) {
-      break
+    } else {
+      if (inTable) {
+        break // End of table
+      }
     }
   }
   
-  return { isTable: inTable && tableRows.length > 0, rows: tableRows }
+  // Filter out any rows that are empty or only dashes
+  const validRows = tableRows.filter(row => row.length > 0 && !row.every(cell => /^\-+$/.test(cell)))
+  
+  return { isTable: validRows.length > 0, rows: validRows }
 }
 
 export async function generateWordDocument({ blocks, styleId, templateName }: GenerateOptions): Promise<Blob> {
