@@ -1,5 +1,7 @@
 'use client'
 
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import type { ParsedDocument } from '@/lib/text-parser'
 import type { Template } from '@/lib/templates'
 import { applyStyle } from '@/lib/styles'
@@ -33,99 +35,45 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
   
   const styledMarkdown = applyStyle(markdownText, styleId)
   
-  // Simple table renderer
-  const renderTable = (tableLines: string[]) => {
-    const rows = tableLines.filter(line => line.startsWith('|')).map(line => {
-      const cells = line.split('|').filter(cell => {
-        const clean = cell.trim()
-        return clean !== '' && clean !== '---' && !/^[\-\:]+$/.test(clean)
-      })
-      return cells
-    }).filter(row => row.length > 0)
-    
-    if (rows.length === 0) return null
-    
-    return (
+  const components = {
+    h1: ({ children }: any) => (
+      <h1 className="text-2xl font-bold mb-4" style={colorHeadings ? { color: '#1E3A8A' } : undefined}>
+        {children}
+      </h1>
+    ),
+    h2: ({ children }: any) => (
+      <h2 className="text-xl font-semibold mb-3" style={colorHeadings ? { color: '#2563EB' } : undefined}>
+        {children}
+      </h2>
+    ),
+    h3: ({ children }: any) => (
+      <h3 className="text-lg font-medium mb-2" style={colorHeadings ? { color: '#3B82F6' } : undefined}>
+        {children}
+      </h3>
+    ),
+    table: ({ children }: any) => (
       <div className="overflow-x-auto my-4">
         <table className="min-w-full border-collapse border border-border">
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={i}>
-                {row.map((cell, j) => (
-                  <td key={j} className="border border-border px-3 py-2">
-                    {cell.trim()}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
+          {children}
         </table>
       </div>
-    )
-  }
-  
-  // Parse markdown and render
-  const renderContent = () => {
-    const lines = styledMarkdown.split('\n')
-    const elements: React.ReactNode[] = []
-    let i = 0
-    
-    while (i < lines.length) {
-      const line = lines[i].trim()
-      
-      // Check for table
-      if (line.startsWith('|')) {
-        const tableLines: string[] = []
-        while (i < lines.length && lines[i].trim().startsWith('|')) {
-          tableLines.push(lines[i].trim())
-          i++
-        }
-        const table = renderTable(tableLines)
-        if (table) elements.push(table)
-        continue
-      }
-      
-      // Headings
-      if (line.startsWith('# ')) {
-        elements.push(<h1 key={elements.length} className="text-2xl font-bold mb-4">{line.slice(2)}</h1>)
-        i++
-        continue
-      }
-      if (line.startsWith('## ')) {
-        elements.push(<h2 key={elements.length} className="text-xl font-semibold mb-3">{line.slice(3)}</h2>)
-        i++
-        continue
-      }
-      if (line.startsWith('### ')) {
-        elements.push(<h3 key={elements.length} className="text-lg font-medium mb-2">{line.slice(4)}</h3>)
-        i++
-        continue
-      }
-      
-      // Lists
-      if (line.startsWith('- ')) {
-        elements.push(<li key={elements.length} className="ml-4 list-disc">{line.slice(2)}</li>)
-        i++
-        continue
-      }
-      if (line.match(/^\d+\. /)) {
-        elements.push(<li key={elements.length} className="ml-4 list-decimal">{line.replace(/^\d+\. /, '')}</li>)
-        i++
-        continue
-      }
-      
-      // Empty line
-      if (line === '') {
-        i++
-        continue
-      }
-      
-      // Paragraph
-      elements.push(<p key={elements.length} className="text-sm leading-relaxed mb-2">{line}</p>)
-      i++
-    }
-    
-    return elements
+    ),
+    th: ({ children }: any) => (
+      <th className="border border-border px-3 py-2 bg-muted font-semibold">
+        {children}
+      </th>
+    ),
+    td: ({ children }: any) => (
+      <td className="border border-border px-3 py-2">
+        {children}
+      </td>
+    ),
+    ul: ({ children }: any) => <ul className="list-disc pl-6 my-2 space-y-1">{children}</ul>,
+    ol: ({ children }: any) => <ol className="list-decimal pl-6 my-2 space-y-1">{children}</ol>,
+    li: ({ children }: any) => <li className="text-sm">{children}</li>,
+    p: ({ children }: any) => <p className="text-sm leading-relaxed mb-2">{children}</p>,
+    strong: ({ children }: any) => <strong className="font-semibold">{children}</strong>,
+    em: ({ children }: any) => <em className="italic">{children}</em>,
   }
   
   if (document.blocks.length === 0) {
@@ -159,7 +107,9 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
       
       <div className="max-h-[500px] overflow-y-auto px-6 py-6">
         <div className="prose prose-sm max-w-none">
-          {renderContent()}
+          <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+            {styledMarkdown}
+          </ReactMarkdown>
         </div>
       </div>
       

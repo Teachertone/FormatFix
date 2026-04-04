@@ -106,7 +106,7 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
     
     // Try to detect and convert space-aligned tables
     if (text) {
-      text = convertSpaceAlignedTable(text)
+      //text = convertSpaceAlignedTable(text)
     }
     
     if (text) {
