@@ -15,15 +15,15 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    // Stop the default paste immediately
-    e.preventDefault()
-    
-    // Get plain text only (no HTML complexity)
+    // Get plain text
     const text = e.clipboardData.getData('text/plain')
     
-    console.log('[v0] Pasted plain text:', text)
+    console.log('[v0] Pasted text:', text)
     
     if (text) {
+      // Prevent default paste
+      e.preventDefault()
+      
       const existingText = value
       const newText = existingText ? existingText + '\n\n' + text : text
       onChange(newText)
