@@ -11,19 +11,79 @@ interface TextInputProps {
   onLoadExample: () => void
 }
 
+// Detect if text contains a space-aligned table and convert to markdown
+function convertSpaceAlignedTable(text: string): string {
+  const lines = text.split('\n')
+  
+  // Find lines that look like a table (multiple spaces, not just one)
+  let tableStart = -1
+  let tableEnd = -1
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    // Check if line has multiple spaces (potential table row)
+    if (line.includes('  ') && line.trim().length > 10) {
+      if (tableStart === -1) tableStart = i
+      tableEnd = i
+    } else if (tableStart !== -1) {
+      break
+    }
+  }
+  
+  if (tableStart === -1 || tableEnd === -1) return text
+  
+  // Extract table lines
+  const tableLines = lines.slice(tableStart, tableEnd + 1)
+  
+  // Parse columns by splitting on multiple spaces
+  const rows = tableLines.map(line => {
+    // Split on 2+ spaces
+    const cells = line.split(/\s{2,}/).map(cell => cell.trim())
+    return cells
+  })
+  
+  if (rows.length < 2) return text
+  
+  // Find max columns
+  const maxCols = Math.max(...rows.map(row => row.length))
+  if (maxCols < 2) return text
+  
+  // Build markdown table
+  const headerRow = rows[0]
+  const markdownRows: string[] = []
+  
+  // Header
+  markdownRows.push(`| ${headerRow.join(' | ')} |`)
+  // Separator
+  markdownRows.push(`|${' --- |'.repeat(headerRow.length)}`)
+  // Data rows
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i]
+    // Pad row to match header length
+    while (row.length < headerRow.length) row.push('')
+    markdownRows.push(`| ${row.join(' | ')} |`)
+  }
+  
+  // Replace the original lines with the markdown table
+  const before = lines.slice(0, tableStart).join('\n')
+  const after = lines.slice(tableEnd + 1).join('\n')
+  
+  return [before, markdownRows.join('\n'), after].filter(p => p.trim()).join('\n\n')
+}
+
 export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    // Get plain text
-    const text = e.clipboardData.getData('text/plain')
+    let text = e.clipboardData.getData('text/plain')
     
-    console.log('[v0] Pasted text:', text)
+    console.log('[v0] Pasted plain text:', text)
+    
+    // Try to detect and convert space-aligned tables
+    text = convertSpaceAlignedTable(text)
     
     if (text) {
-      // Prevent default paste
       e.preventDefault()
-      
       const existingText = value
       const newText = existingText ? existingText + '\n\n' + text : text
       onChange(newText)
@@ -108,7 +168,7 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
 The app will automatically detect:
 • Headings (# Markdown style, ALL CAPS, or ending with colon:)
 • Bullet points (-, *, or numbered lists)
-• Tables (markdown format with | and ---)
+• Tables (markdown format with | and ---, or space-aligned text)
 • Paragraphs and text formatting
 
 You can also drag and drop a .txt file here."
