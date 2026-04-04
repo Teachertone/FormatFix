@@ -7,7 +7,6 @@ interface GenerateOptions {
   templateName: string
 }
 
-// Helper to download blob as file
 export function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -19,43 +18,30 @@ export function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-// Parse markdown table from a string
 function parseMarkdownTable(content: string): { isTable: boolean; rows: string[][] } {
   const lines = content.split('\n')
   const tableRows: string[][] = []
-  let inTable = false
   
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim()
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed.startsWith('|') || !trimmed.endsWith('|')) continue
     
-    if (line.startsWith('|') && line.endsWith('|')) {
-      // Remove the first and last pipe, then split by "|"
-      const withoutOuterPipes = line.slice(1, -1)
-      const cells = withoutOuterPipes.split('|').map(cell => cell.trim())
-      
-      // Skip empty rows
-      if (cells.length === 0) continue
-      
-      // Check if this is a separator row (all cells are dashes or colons)
-      const isSeparator = cells.every(cell => /^[\-\:]+$/.test(cell))
-      
-      if (isSeparator) {
-        inTable = true
-        continue // Skip separator row
-      }
-      
-      if (cells.length > 0) {
-        inTable = true
-        tableRows.push(cells)
-      }
-    } else if (inTable) {
-      // End of table
-      break
-    }
+    const cells = trimmed.split('|').filter(cell => {
+      const clean = cell.trim()
+      return clean !== '' && clean !== '---' && !/^\-+$/.test(clean)
+    })
+    
+    if (cells.length === 0) continue
+    
+    // Skip separator rows (all dashes)
+    if (cells.every(cell => /^[\-\:]+$/.test(cell.trim()))) continue
+    
+    tableRows.push(cells)
   }
   
   return { isTable: tableRows.length > 0, rows: tableRows }
 }
+
 export async function generateWordDocument({ blocks, styleId, templateName }: GenerateOptions): Promise<Blob> {
   const children: any[] = []
   
@@ -63,8 +49,8 @@ export async function generateWordDocument({ blocks, styleId, templateName }: Ge
     const { isTable, rows } = parseMarkdownTable(block.content)
     
     if (isTable && rows.length > 0) {
-      const tableRows = rows.map(row => {
-        const cells = row.map(cell => 
+      const tableCells = rows.map(row => 
+        row.map(cell => 
           new TableCell({
             children: [new Paragraph({ children: [new TextRun(cell.trim())] })],
             borders: {
@@ -75,8 +61,9 @@ export async function generateWordDocument({ blocks, styleId, templateName }: Ge
             },
           })
         )
-        return new TableRow({ children: cells })
-      })
+      )
+      
+      const tableRows = tableCells.map(cells => new TableRow({ children: cells }))
       
       children.push(new Table({ rows: tableRows, width: { size: 100, type: WidthType.PERCENTAGE } }))
       children.push(new Paragraph({ text: '' }))
@@ -104,6 +91,5 @@ export async function generateWordDocument({ blocks, styleId, templateName }: Ge
   }
   
   const doc = new Document({ sections: [{ properties: {}, children }] })
-  const blob = await Packer.toBlob(doc)
-  return blob
+  return await Packer.toBlob(doc)
 }
