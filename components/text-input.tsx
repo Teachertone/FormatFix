@@ -11,23 +11,63 @@ interface TextInputProps {
   onLoadExample: () => void
 }
 
-// Helper function to convert HTML list items to markdown-style bullet points
-function convertHtmlToListItems(html: string): string {
+// Helper function to preserve markdown tables from plain text
+function preserveMarkdownTables(text: string): string {
+  const lines = text.split('\n')
+  const result: string[] = []
+  let inTable = false
+  let tableLines: string[] = []
+  
+  for (const line of lines) {
+    // Check if line looks like a markdown table row (contains | and multiple columns)
+    const pipeCount = (line.match(/\|/g) || []).length
+    const isTableRow = pipeCount >= 2
+    
+    if (isTableRow) {
+      if (!inTable) {
+        inTable = true
+        tableLines = []
+      }
+      tableLines.push(line)
+    } else {
+      if (inTable) {
+        // Flush the table
+        result.push(...tableLines)
+        inTable = false
+        tableLines = []
+      }
+      result.push(line)
+    }
+  }
+  
+  if (inTable) {
+    result.push(...tableLines)
+  }
+  
+  return result.join('\n')
+}
+
+// Helper function to convert HTML tables to markdown
+function convertHtmlTablesToMarkdown(html: string): string {
   const parser = new DOMParser()
   const doc = parser.parseFromString(html, 'text/html')
-  const lists = doc.querySelectorAll('ul, ol')
+  const tables = doc.querySelectorAll('table')
+  
+  if (tables.length === 0) return ''
   
   let result = ''
-  lists.forEach(list => {
-    const items = list.querySelectorAll('li')
-    items.forEach(item => {
-      if (list.tagName === 'UL') {
-        result += `- ${item.textContent?.trim()}\n`
-      } else if (list.tagName === 'OL') {
-        result += `1. ${item.textContent?.trim()}\n`
+  tables.forEach(table => {
+    const rows: string[] = []
+    const trs = table.querySelectorAll('tr')
+    trs.forEach((tr, i) => {
+      const cells = tr.querySelectorAll('th, td')
+      const rowCells = Array.from(cells).map(cell => cell.textContent?.trim() || '')
+      rows.push(`| ${rowCells.join(' | ')} |`)
+      if (i === 0 && tr.querySelectorAll('th').length > 0) {
+        rows.push(`|${' --- |'.repeat(rowCells.length)}`)
       }
     })
-    result += '\n'
+    result += `\n${rows.join('\n')}\n\n`
   })
   
   return result
@@ -36,91 +76,94 @@ function convertHtmlToListItems(html: string): string {
 export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-const handlePaste = useCallback((e: React.ClipboardEvent) => {
-  const html = e.clipboardData.getData('text/html')
-  const plainText = e.clipboardData.getData('text/plain')
-  console.log('[v0] ===== FULL HTML =====')
-  console.log('[v0] HTML:', html)
-  
-  if (html) {
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(html, 'text/html')
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const html = e.clipboardData.getData('text/html')
+    let plainText = e.clipboardData.getData('text/plain')
     
-    // Function to convert HTML nodes to markdown
-   function htmlToMarkdown(node: Node): string {
-  if (node.nodeType === Node.TEXT_NODE) {
-    return node.textContent || ''
-  }
-  
-  if (node.nodeType === Node.ELEMENT_NODE) {
-    const el = node as Element
-    const tag = el.tagName.toLowerCase()
+    console.log('[v0] ===== PASTE EVENT =====')
     
-    let inner = ''
-    for (const child of Array.from(el.childNodes)) {
-      inner += htmlToMarkdown(child)
+    // First, try to extract HTML tables
+    if (html) {
+      const tableMarkdown = convertHtmlTablesToMarkdown(html)
+      if (tableMarkdown) {
+        const existingText = value
+        const newText = existingText ? existingText + '\n\n' + tableMarkdown : tableMarkdown
+        onChange(newText)
+        e.preventDefault()
+        return
+      }
     }
     
-    switch (tag) {
-      case 'h1': return `\n# ${inner.trim()}\n\n`
-      case 'h2': return `\n## ${inner.trim()}\n\n`
-      case 'h3': return `\n### ${inner.trim()}\n\n`
-      case 'h4': return `\n#### ${inner.trim()}\n\n`
-      case 'h5': return `\n##### ${inner.trim()}\n\n`
-      case 'h6': return `\n###### ${inner.trim()}\n\n`
-      case 'p': return `${inner.trim()}\n\n`
-     case 'li': 
-  console.log("[v0] LI extracted (inner):", inner)  // <-- ADD THIS
-  const parent = el.parentElement
-  if (parent && parent.tagName.toLowerCase() === 'ol') {
-    return `1. ${inner.trim()}\n`
-  }
-  return `- ${inner.trim()}\n`
-      case 'strong':
-      case 'b': return `**${inner}**`
-      case 'em':
-      case 'i': return `*${inner}*`
-      case 'ul':
-      case 'ol': return `\n${inner}\n`
-      case 'table':
-        const rows: string[] = []
-        const trs = el.querySelectorAll('tr')
-        trs.forEach((tr, i) => {
-          const cells = tr.querySelectorAll('th, td')
-          const rowCells = Array.from(cells).map(cell => cell.textContent?.trim() || '')
-          rows.push(`| ${rowCells.join(' | ')} |`)
-          if (i === 0 && tr.querySelectorAll('th').length > 0) {
-            rows.push(`|${' --- |'.repeat(rowCells.length)}`)
+    // If no HTML tables, preserve markdown tables in plain text
+    plainText = preserveMarkdownTables(plainText)
+    
+    // Also try the full HTML to markdown conversion for other elements
+    if (html) {
+      const parser = new DOMParser()
+      const doc = parser.parseFromString(html, 'text/html')
+      
+      function htmlToMarkdown(node: Node): string {
+        if (node.nodeType === Node.TEXT_NODE) {
+          return node.textContent || ''
+        }
+        
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const el = node as Element
+          const tag = el.tagName.toLowerCase()
+          
+          let inner = ''
+          for (const child of Array.from(el.childNodes)) {
+            inner += htmlToMarkdown(child)
           }
-        })
-        return `\n${rows.join('\n')}\n\n`
-      case 'br': return '\n'
-      case 'div': return `${inner}\n`
-      default: return inner
+          
+          switch (tag) {
+            case 'h1': return `\n# ${inner.trim()}\n\n`
+            case 'h2': return `\n## ${inner.trim()}\n\n`
+            case 'h3': return `\n### ${inner.trim()}\n\n`
+            case 'h4': return `\n#### ${inner.trim()}\n\n`
+            case 'h5': return `\n##### ${inner.trim()}\n\n`
+            case 'h6': return `\n###### ${inner.trim()}\n\n`
+            case 'p': return `${inner.trim()}\n\n`
+            case 'li':
+              console.log("[v0] LI extracted (inner):", inner)
+              const parent = el.parentElement
+              if (parent && parent.tagName.toLowerCase() === 'ol') {
+                return `1. ${inner.trim()}\n`
+              }
+              return `- ${inner.trim()}\n`
+            case 'strong':
+            case 'b': return `**${inner}**`
+            case 'em':
+            case 'i': return `*${inner}*`
+            case 'ul':
+            case 'ol': return `\n${inner}\n`
+            case 'br': return '\n'
+            case 'div': return `${inner}\n`
+            default: return inner
+          }
+        }
+        return ''
+      }
+      
+      let markdown = htmlToMarkdown(doc.body)
+      markdown = markdown.replace(/\n{3,}/g, '\n\n').trim()
+      
+      console.log('[v0] Full markdown output:', markdown)
+      
+      if (markdown) {
+        const existingText = value
+        const newText = existingText ? existingText + '\n\n' + markdown : markdown
+        onChange(newText)
+        e.preventDefault()
+        return
+      }
     }
-  }
-  return ''
-}
     
-    let markdown = htmlToMarkdown(doc.body)
-    markdown = markdown.replace(/\n{3,}/g, '\n\n').trim()
-    
-    console.log('[v0] Full markdown output:', markdown)
-    
-    if (markdown) {
-      const existingText = value
-      const newText = existingText ? existingText + '\n\n' + markdown : markdown
-      onChange(newText)
-      e.preventDefault()  // <-- THIS PREVENTS DUPLICATES
-      return              // <-- EXIT, DON'T PROCESS PLAIN TEXT
+    // Final fallback: use preserved plain text
+    if (plainText) {
+      onChange(plainText)
     }
-  }
-  
-  // Fallback: if no HTML or conversion failed, use plain text
-  if (plainText) {
-    onChange(plainText)
-  }
-}, [value, onChange])
+  }, [value, onChange])
   
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -200,6 +243,7 @@ const handlePaste = useCallback((e: React.ClipboardEvent) => {
 The app will automatically detect:
 • Headings (# Markdown style, ALL CAPS, or ending with colon:)
 • Bullet points (-, *, or numbered lists)
+• Tables (markdown format with | and ---)
 • Paragraphs and text formatting
 
 You can also drag and drop a .txt file here."
