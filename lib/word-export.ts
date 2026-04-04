@@ -16,7 +16,6 @@ function parseMarkdownTable(content: string): { isTable: boolean; rows: string[]
   for (const line of lines) {
     const trimmed = line.trim()
     if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
-      // Split by | and filter out empty cells and separator rows
       const cells = trimmed.split('|').filter(cell => {
         const clean = cell.trim()
         return clean !== '' && clean !== '---' && !/^\-+$/.test(clean)
@@ -26,7 +25,6 @@ function parseMarkdownTable(content: string): { isTable: boolean; rows: string[]
         tableRows.push(cells)
       }
     } else if (inTable) {
-      // End of table
       break
     }
   }
@@ -35,17 +33,12 @@ function parseMarkdownTable(content: string): { isTable: boolean; rows: string[]
 }
 
 export async function generateWordDocument({ blocks, styleId, templateName }: GenerateOptions): Promise<Blob> {
-  console.log("[v0] Export called with blocks:", blocks.length)
+  const children: any[] = []
   
   for (const block of blocks) {
-    console.log("[v0] Export block content:", block.content.substring(0, 100))
-  }
-  // ... rest of the function
+    const { isTable, rows } = parseMarkdownTable(block.content)
     
     if (isTable && rows.length > 0) {
-      console.log("[v0] Export - creating Word table with", rows.length, "rows")
-      
-      // Create a Word table
       const tableRows = rows.map(row => {
         const cells = row.map(cell => 
           new TableCell({
@@ -61,64 +54,32 @@ export async function generateWordDocument({ blocks, styleId, templateName }: Ge
         return new TableRow({ children: cells })
       })
       
-      children.push(new Table({
-        rows: tableRows,
-        width: { size: 100, type: WidthType.PERCENTAGE },
-      }))
-      children.push(new Paragraph({ text: '' })) // Add spacing after table
-      
+      children.push(new Table({ rows: tableRows, width: { size: 100, type: WidthType.PERCENTAGE } }))
+      children.push(new Paragraph({ text: '' }))
     } else {
-      // Handle regular blocks
       switch (block.type) {
         case 'heading1':
-          children.push(new Paragraph({
-            text: block.content,
-            heading: 'Heading1',
-            spacing: { before: 240, after: 120 },
-          }))
+          children.push(new Paragraph({ text: block.content, heading: 'Heading1', spacing: { before: 240, after: 120 } }))
           break
         case 'heading2':
-          children.push(new Paragraph({
-            text: block.content,
-            heading: 'Heading2',
-            spacing: { before: 200, after: 80 },
-          }))
+          children.push(new Paragraph({ text: block.content, heading: 'Heading2', spacing: { before: 200, after: 80 } }))
           break
         case 'heading3':
-          children.push(new Paragraph({
-            text: block.content,
-            heading: 'Heading3',
-            spacing: { before: 160, after: 60 },
-          }))
+          children.push(new Paragraph({ text: block.content, heading: 'Heading3', spacing: { before: 160, after: 60 } }))
           break
         case 'bullet':
-          children.push(new Paragraph({
-            text: block.content,
-            bullet: { level: 0 },
-          }))
+          children.push(new Paragraph({ text: block.content, bullet: { level: 0 } }))
           break
         case 'numbered':
-          children.push(new Paragraph({
-            text: block.content,
-            numbering: { reference: "numbering-ref", level: 0 },
-          }))
+          children.push(new Paragraph({ text: block.content, numbering: { reference: "numbering-ref", level: 0 } }))
           break
         default:
-          children.push(new Paragraph({
-            text: block.content,
-            spacing: { after: 120 },
-          }))
+          children.push(new Paragraph({ text: block.content, spacing: { after: 120 } }))
       }
     }
   }
   
-  const doc = new Document({
-    sections: [{
-      properties: {},
-      children,
-    }],
-  })
-  
+  const doc = new Document({ sections: [{ properties: {}, children }] })
   const blob = await Packer.toBlob(doc)
   return blob
 }
