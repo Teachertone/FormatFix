@@ -34,91 +34,104 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
   const styledMarkdown = applyStyle(markdownText, styleId)
   
   // Simple table parser
-  function renderMarkdown(content: string) {
-    const lines = content.split('\n')
-    const elements: React.ReactNode[] = []
-    let inTable = false
-    let tableRows: string[][] = []
+function renderMarkdown(content: string) {
+  const lines = content.split('\n')
+  const elements: React.ReactNode[] = []
+  let inTable = false
+  let tableRows: string[][] = []
+  let headerRow: string[] | null = null
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
     
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
+    // Check if line is a table row
+    if (line.startsWith('|') && line.endsWith('|')) {
+      // Split by pipe and clean
+      const cells = line.split('|').filter(cell => {
+        const clean = cell.trim()
+        return clean !== ''
+      })
       
-      if (line.startsWith('|') && line.endsWith('|')) {
-        const cells = line.split('|').filter(cell => {
-          const clean = cell.trim()
-          return clean !== '' && clean !== '---'
-        })
-        
-        if (cells.length > 0) {
-          if (!inTable) {
-            inTable = true
-            tableRows = []
-          }
-          tableRows.push(cells)
-        }
+      if (cells.length === 0) continue
+      
+      // Check if this is a separator row (all cells are dashes)
+      const isSeparator = cells.every(cell => /^[\-\:]+$/.test(cell.trim()))
+      
+      if (isSeparator) {
+        inTable = true
+        continue // Skip separator row
+      }
+      
+      if (!inTable) {
+        inTable = true
+        tableRows = []
+      }
+      tableRows.push(cells)
+    } else {
+      if (inTable && tableRows.length > 0) {
+        // Render the table
+        elements.push(
+          <div key={`table-${elements.length}`} className="overflow-x-auto my-4">
+            <table className="min-w-full border-collapse border border-border">
+              <tbody>
+                {tableRows.map((row, rowIdx) => (
+                  <tr key={rowIdx}>
+                    {row.map((cell, cellIdx) => (
+                      <td key={cellIdx} className="border border-border px-3 py-2">
+                        {cell.trim()}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+        inTable = false
+        tableRows = []
+      }
+      
+      // Handle non-table content...
+      if (line.startsWith('# ')) {
+        elements.push(<h1 key={elements.length} className="text-2xl font-bold mb-4">{line.slice(2)}</h1>)
+      } else if (line.startsWith('## ')) {
+        elements.push(<h2 key={elements.length} className="text-xl font-semibold mb-3">{line.slice(3)}</h2>)
+      } else if (line.startsWith('### ')) {
+        elements.push(<h3 key={elements.length} className="text-lg font-medium mb-2">{line.slice(4)}</h3>)
+      } else if (line.startsWith('- ')) {
+        elements.push(<li key={elements.length} className="ml-4 list-disc">{line.slice(2)}</li>)
+      } else if (line.match(/^\d+\. /)) {
+        elements.push(<li key={elements.length} className="ml-4 list-decimal">{line.replace(/^\d+\. /, '')}</li>)
+      } else if (line) {
+        elements.push(<p key={elements.length} className="text-sm leading-relaxed mb-2">{line}</p>)
       } else {
-        if (inTable && tableRows.length > 0) {
-          elements.push(
-            <div key={`table-${elements.length}`} className="overflow-x-auto my-4">
-              <table className="min-w-full border-collapse border border-border">
-                <tbody>
-                  {tableRows.map((row, rowIdx) => (
-                    <tr key={rowIdx}>
-                      {row.map((cell, cellIdx) => (
-                        <td key={cellIdx} className="border border-border px-3 py-2">
-                          {cell.trim()}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )
-          inTable = false
-          tableRows = []
-        }
-        
-        if (line.startsWith('# ')) {
-          elements.push(<h1 key={elements.length} className="text-2xl font-bold mb-4">{line.slice(2)}</h1>)
-        } else if (line.startsWith('## ')) {
-          elements.push(<h2 key={elements.length} className="text-xl font-semibold mb-3">{line.slice(3)}</h2>)
-        } else if (line.startsWith('### ')) {
-          elements.push(<h3 key={elements.length} className="text-lg font-medium mb-2">{line.slice(4)}</h3>)
-        } else if (line.startsWith('- ')) {
-          elements.push(<li key={elements.length} className="ml-4 list-disc">{line.slice(2)}</li>)
-        } else if (line.match(/^\d+\. /)) {
-          elements.push(<li key={elements.length} className="ml-4 list-decimal">{line.replace(/^\d+\. /, '')}</li>)
-        } else if (line) {
-          elements.push(<p key={elements.length} className="text-sm leading-relaxed mb-2">{line}</p>)
-        } else {
-          elements.push(<br key={elements.length} />)
-        }
+        elements.push(<br key={elements.length} />)
       }
     }
-    
-    if (inTable && tableRows.length > 0) {
-      elements.push(
-        <div key={`table-${elements.length}`} className="overflow-x-auto my-4">
-          <table className="min-w-full border-collapse border border-border">
-            <tbody>
-              {tableRows.map((row, rowIdx) => (
-                <tr key={rowIdx}>
-                  {row.map((cell, cellIdx) => (
-                    <td key={cellIdx} className="border border-border px-3 py-2">
-                      {cell.trim()}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
-    }
-    
-    return elements
   }
+  
+  if (inTable && tableRows.length > 0) {
+    elements.push(
+      <div key={`table-${elements.length}`} className="overflow-x-auto my-4">
+        <table className="min-w-full border-collapse border border-border">
+          <tbody>
+            {tableRows.map((row, rowIdx) => (
+              <tr key={rowIdx}>
+                {row.map((cell, cellIdx) => (
+                  <td key={cellIdx} className="border border-border px-3 py-2">
+                    {cell.trim()}
+                  </td>
+                ))}
+              <tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+  
+  return elements
+} 
   
   if (document.blocks.length === 0) {
     return (
