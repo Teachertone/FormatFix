@@ -165,18 +165,26 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
     }
   }, [value, onChange])
   
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    const file = e.dataTransfer.files[0]
-    if (file && file.type === 'text/plain') {
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        const text = event.target?.result as string
-        onChange(text)
-      }
-      reader.readAsText(file)
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+  const html = e.clipboardData.getData('text/html')
+  
+  if (html) {
+    // ... process the HTML
+    const markdown = convertHtmlToMarkdown(html)
+    
+    if (markdown) {
+      onChange(markdown)
+      e.preventDefault()  // <-- THIS MUST BE HERE
+      return              // <-- THIS MUST BE HERE
     }
-  }, [onChange])
+  }
+  
+  // Fallback to plain text
+  const plainText = e.clipboardData.getData('text/plain')
+  if (plainText) {
+    onChange(plainText)
+  }
+}, [onChange])
   
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
