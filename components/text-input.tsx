@@ -11,93 +11,15 @@ interface TextInputProps {
   onLoadExample: () => void
 }
 
-// Helper function to preserve markdown tables from plain text
-function preserveMarkdownTables(text: string): string {
-  const lines = text.split('\n')
-  const result: string[] = []
-  let inTable = false
-  let tableLines: string[] = []
-  
-  for (const line of lines) {
-    // Check if line looks like a markdown table row (contains | and multiple columns)
-    const pipeCount = (line.match(/\|/g) || []).length
-    const isTableRow = pipeCount >= 2
-    
-    if (isTableRow) {
-      if (!inTable) {
-        inTable = true
-        tableLines = []
-      }
-      tableLines.push(line)
-    } else {
-      if (inTable) {
-        // Flush the table
-        result.push(...tableLines)
-        inTable = false
-        tableLines = []
-      }
-      result.push(line)
-    }
-  }
-  
-  if (inTable) {
-    result.push(...tableLines)
-  }
-  
-  return result.join('\n')
-}
-
-// Helper function to convert HTML tables to markdown
-function convertHtmlTablesToMarkdown(html: string): string {
-  const parser = new DOMParser()
-  const doc = parser.parseFromString(html, 'text/html')
-  const tables = doc.querySelectorAll('table')
-  
-  if (tables.length === 0) return ''
-  
-  let result = ''
-  tables.forEach(table => {
-    const rows: string[] = []
-    const trs = table.querySelectorAll('tr')
-    trs.forEach((tr, i) => {
-      const cells = tr.querySelectorAll('th, td')
-      const rowCells = Array.from(cells).map(cell => cell.textContent?.trim() || '')
-      rows.push(`| ${rowCells.join(' | ')} |`)
-      if (i === 0 && tr.querySelectorAll('th').length > 0) {
-        rows.push(`|${' --- |'.repeat(rowCells.length)}`)
-      }
-    })
-    result += `\n${rows.join('\n')}\n\n`
-  })
-  
-  return result
-}
-
 export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const html = e.clipboardData.getData('text/html')
-    let plainText = e.clipboardData.getData('text/plain')
+    const plainText = e.clipboardData.getData('text/plain')
     
     console.log('[v0] ===== PASTE EVENT =====')
     
-    // First, try to extract HTML tables
-    if (html) {
-      const tableMarkdown = convertHtmlTablesToMarkdown(html)
-      if (tableMarkdown) {
-        const existingText = value
-        const newText = existingText ? existingText + '\n\n' + tableMarkdown : tableMarkdown
-        onChange(newText)
-        e.preventDefault()
-        return
-      }
-    }
-    
-    // If no HTML tables, preserve markdown tables in plain text
-    plainText = preserveMarkdownTables(plainText)
-    
-    // Also try the full HTML to markdown conversion for other elements
     if (html) {
       const parser = new DOMParser()
       const doc = parser.parseFromString(html, 'text/html')
@@ -125,7 +47,6 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
             case 'h6': return `\n###### ${inner.trim()}\n\n`
             case 'p': return `${inner.trim()}\n\n`
             case 'li':
-              console.log("[v0] LI extracted (inner):", inner)
               const parent = el.parentElement
               if (parent && parent.tagName.toLowerCase() === 'ol') {
                 return `1. ${inner.trim()}\n`
@@ -159,32 +80,24 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
       }
     }
     
-    // Final fallback: use preserved plain text
+    // Fallback to plain text
     if (plainText) {
       onChange(plainText)
     }
   }, [value, onChange])
   
-  const handlePaste = useCallback((e: React.ClipboardEvent) => {
-  const html = e.clipboardData.getData('text/html')
-  
-  if (html) {
-    // ... process the HTML
-    const markdown = convertHtmlToMarkdown(html)
-    
-    if (markdown) {
-      onChange(markdown)
-      e.preventDefault()  // <-- THIS MUST BE HERE
-      return              // <-- THIS MUST BE HERE
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    const file = e.dataTransfer.files[0]
+    if (file && file.type === 'text/plain') {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        const text = event.target?.result as string
+        onChange(text)
+      }
+      reader.readAsText(file)
     }
-  }
-  
-  // Fallback to plain text
-  const plainText = e.clipboardData.getData('text/plain')
-  if (plainText) {
-    onChange(plainText)
-  }
-}, [onChange])
+  }, [onChange])
   
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -251,7 +164,6 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
 The app will automatically detect:
 • Headings (# Markdown style, ALL CAPS, or ending with colon:)
 • Bullet points (-, *, or numbered lists)
-• Tables (markdown format with | and ---)
 • Paragraphs and text formatting
 
 You can also drag and drop a .txt file here."
