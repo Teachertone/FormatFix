@@ -35,11 +35,12 @@ function parseMarkdownTable(content: string): { isTable: boolean; rows: string[]
 }
 
 export async function generateWordDocument({ blocks, styleId, templateName }: GenerateOptions): Promise<Blob> {
-  const children: any[] = []
+  console.log("[v0] Export called with blocks:", blocks.length)
   
   for (const block of blocks) {
-    // Check if this block contains a markdown table
-    const { isTable, rows } = parseMarkdownTable(block.content)
+    console.log("[v0] Export block content:", block.content.substring(0, 100))
+  }
+  // ... rest of the function
     
     if (isTable && rows.length > 0) {
       console.log("[v0] Export - creating Word table with", rows.length, "rows")
