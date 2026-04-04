@@ -7,24 +7,26 @@ interface GenerateOptions {
   templateName: string
 }
 
-// Helper to detect and parse markdown tables
-function parseMarkdownTables(text: string): { isTable: boolean; rows: string[][] } {
-  const lines = text.split('\n')
+// Parse markdown table from a string
+function parseMarkdownTable(content: string): { isTable: boolean; rows: string[][] } {
+  const lines = content.split('\n')
   const tableRows: string[][] = []
   let inTable = false
   
   for (const line of lines) {
     const trimmed = line.trim()
     if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+      // Split by | and filter out empty cells and separator rows
       const cells = trimmed.split('|').filter(cell => {
         const clean = cell.trim()
-        return clean !== '' && clean !== '---'
+        return clean !== '' && clean !== '---' && !/^\-+$/.test(clean)
       })
       if (cells.length > 0) {
         inTable = true
         tableRows.push(cells)
       }
     } else if (inTable) {
+      // End of table
       break
     }
   }
@@ -36,10 +38,12 @@ export async function generateWordDocument({ blocks, styleId, templateName }: Ge
   const children: any[] = []
   
   for (const block of blocks) {
-    // Check if block contains a markdown table
-    const { isTable, rows } = parseMarkdownTables(block.content)
+    // Check if this block contains a markdown table
+    const { isTable, rows } = parseMarkdownTable(block.content)
     
     if (isTable && rows.length > 0) {
+      console.log("[v0] Export - creating Word table with", rows.length, "rows")
+      
       // Create a Word table
       const tableRows = rows.map(row => {
         const cells = row.map(cell => 
@@ -60,7 +64,8 @@ export async function generateWordDocument({ blocks, styleId, templateName }: Ge
         rows: tableRows,
         width: { size: 100, type: WidthType.PERCENTAGE },
       }))
-      children.push(new Paragraph({ text: '' })) // spacing
+      children.push(new Paragraph({ text: '' })) // Add spacing after table
+      
     } else {
       // Handle regular blocks
       switch (block.type) {
