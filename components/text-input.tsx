@@ -15,7 +15,7 @@ interface TextInputProps {
 function convertSpaceAlignedTable(text: string): string {
   const lines = text.split('\n')
   
-  // Find lines that look like a table (multiple spaces, not just one)
+  // Find lines that look like a table (multiple spaces)
   let tableStart = -1
   let tableEnd = -1
   
@@ -35,21 +35,44 @@ function convertSpaceAlignedTable(text: string): string {
   // Extract table lines
   const tableLines = lines.slice(tableStart, tableEnd + 1)
   
-  // Parse columns by splitting on multiple spaces
+  // Parse columns by splitting on multiple spaces (2 or more)
   const rows = tableLines.map(line => {
-    // Split on 2+ spaces
-    const cells = line.split(/\s{2,}/).map(cell => cell.trim())
+    const cells: string[] = []
+    let currentCell = ''
+    let spaceCount = 0
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i]
+      if (char === ' ') {
+        spaceCount++
+        if (spaceCount >= 2 && currentCell.trim()) {
+          cells.push(currentCell.trim())
+          currentCell = ''
+          spaceCount = 0
+          // Skip remaining spaces
+          while (i + 1 < line.length && line[i + 1] === ' ') i++
+        }
+      } else {
+        if (spaceCount > 0) {
+          currentCell += ' '.repeat(spaceCount)
+          spaceCount = 0
+        }
+        currentCell += char
+      }
+    }
+    if (currentCell.trim()) {
+      cells.push(currentCell.trim())
+    }
     return cells
   })
   
   if (rows.length < 2) return text
   
-  // Find max columns
-  const maxCols = Math.max(...rows.map(row => row.length))
-  if (maxCols < 2) return text
+  // Get the header row (first row)
+  const headerRow = rows[0]
+  const dataRows = rows.slice(1)
   
   // Build markdown table
-  const headerRow = rows[0]
   const markdownRows: string[] = []
   
   // Header
@@ -57,18 +80,20 @@ function convertSpaceAlignedTable(text: string): string {
   // Separator
   markdownRows.push(`|${' --- |'.repeat(headerRow.length)}`)
   // Data rows
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i]
+  for (const row of dataRows) {
     // Pad row to match header length
     while (row.length < headerRow.length) row.push('')
-    markdownRows.push(`| ${row.join(' | ')} |`)
+    markdownRows.push(`| ${row.slice(0, headerRow.length).join(' | ')} |`)
   }
   
   // Replace the original lines with the markdown table
   const before = lines.slice(0, tableStart).join('\n')
   const after = lines.slice(tableEnd + 1).join('\n')
   
-  return [before, markdownRows.join('\n'), after].filter(p => p.trim()).join('\n\n')
+  const result = [before, markdownRows.join('\n'), after].filter(p => p.trim()).join('\n\n')
+  console.log('[v0] Converted space-aligned table to markdown:', result)
+  
+  return result
 }
 
 export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
@@ -80,7 +105,9 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
     console.log('[v0] Pasted plain text:', text)
     
     // Try to detect and convert space-aligned tables
-    text = convertSpaceAlignedTable(text)
+    if (text) {
+      text = convertSpaceAlignedTable(text)
+    }
     
     if (text) {
       e.preventDefault()
