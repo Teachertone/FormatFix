@@ -15,87 +15,18 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    const html = e.clipboardData.getData('text/html')
-    const plainText = e.clipboardData.getData('text/plain')
+    // Stop the default paste immediately
+    e.preventDefault()
     
-    console.log('[v0] ===== PASTE EVENT =====')
+    // Get plain text only (no HTML complexity)
+    const text = e.clipboardData.getData('text/plain')
     
-    if (html) {
-      const parser = new DOMParser()
-      const doc = parser.parseFromString(html, 'text/html')
-      
-      function htmlToMarkdown(node: Node): string {
-        if (node.nodeType === Node.TEXT_NODE) {
-          return node.textContent || ''
-        }
-        
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          const el = node as Element
-          const tag = el.tagName.toLowerCase()
-          
-          let inner = ''
-          for (const child of Array.from(el.childNodes)) {
-            inner += htmlToMarkdown(child)
-          }
-          
-          switch (tag) {
-            case 'h1': return `\n# ${inner.trim()}\n\n`
-            case 'h2': return `\n## ${inner.trim()}\n\n`
-            case 'h3': return `\n### ${inner.trim()}\n\n`
-            case 'h4': return `\n#### ${inner.trim()}\n\n`
-            case 'h5': return `\n##### ${inner.trim()}\n\n`
-            case 'h6': return `\n###### ${inner.trim()}\n\n`
-            case 'p': return `${inner.trim()}\n\n`
-            case 'li':
-              const parent = el.parentElement
-              if (parent && parent.tagName.toLowerCase() === 'ol') {
-                return `1. ${inner.trim()}\n`
-              }
-              return `- ${inner.trim()}\n`
-            case 'table':
-              // Convert HTML table to markdown table
-              const rows: string[] = []
-              const trs = el.querySelectorAll('tr')
-              trs.forEach((tr, idx) => {
-                const cells = tr.querySelectorAll('th, td')
-                const rowCells = Array.from(cells).map(cell => cell.textContent?.trim() || '')
-                rows.push(`| ${rowCells.join(' | ')} |`)
-                if (idx === 0 && tr.querySelectorAll('th').length > 0) {
-                  rows.push(`|${' --- |'.repeat(rowCells.length)}`)
-                }
-              })
-              return `\n${rows.join('\n')}\n\n`
-            case 'strong':
-            case 'b': return `**${inner}**`
-            case 'em':
-            case 'i': return `*${inner}*`
-            case 'ul':
-            case 'ol': return `\n${inner}\n`
-            case 'br': return '\n'
-            case 'div': return `${inner}\n`
-            default: return inner
-          }
-        }
-        return ''
-      }
-      
-      let markdown = htmlToMarkdown(doc.body)
-      markdown = markdown.replace(/\n{3,}/g, '\n\n').trim()
-      
-      console.log('[v0] Full markdown output:', markdown)
-      
-      if (markdown) {
-        const existingText = value
-        const newText = existingText ? existingText + '\n\n' + markdown : markdown
-        onChange(newText)
-        e.preventDefault()
-        return
-      }
-    }
+    console.log('[v0] Pasted plain text:', text)
     
-    // Fallback to plain text
-    if (plainText) {
-      onChange(plainText)
+    if (text) {
+      const existingText = value
+      const newText = existingText ? existingText + '\n\n' + text : text
+      onChange(newText)
     }
   }, [value, onChange])
   
