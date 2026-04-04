@@ -52,6 +52,19 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
                 return `1. ${inner.trim()}\n`
               }
               return `- ${inner.trim()}\n`
+            case 'table':
+              // Convert HTML table to markdown table
+              const rows: string[] = []
+              const trs = el.querySelectorAll('tr')
+              trs.forEach((tr, idx) => {
+                const cells = tr.querySelectorAll('th, td')
+                const rowCells = Array.from(cells).map(cell => cell.textContent?.trim() || '')
+                rows.push(`| ${rowCells.join(' | ')} |`)
+                if (idx === 0 && tr.querySelectorAll('th').length > 0) {
+                  rows.push(`|${' --- |'.repeat(rowCells.length)}`)
+                }
+              })
+              return `\n${rows.join('\n')}\n\n`
             case 'strong':
             case 'b': return `**${inner}**`
             case 'em':
@@ -164,6 +177,7 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
 The app will automatically detect:
 • Headings (# Markdown style, ALL CAPS, or ending with colon:)
 • Bullet points (-, *, or numbered lists)
+• Tables (markdown format with | and ---)
 • Paragraphs and text formatting
 
 You can also drag and drop a .txt file here."
