@@ -25,35 +25,31 @@ function parseMarkdownTable(content: string): { isTable: boolean; rows: string[]
   const tableRows: string[][] = []
   let inTable = false
   
-  for (const line of lines) {
-    const trimmed = line.trim()
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
     
-    // Check if line is a table row (starts with | and ends with |)
-    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
-      // Split by | and clean each cell
-      const cells = trimmed.split('|').map(cell => cell.trim()).filter(cell => cell !== '')
+    if (line.startsWith('|') && line.endsWith('|')) {
+      // Split by | and clean
+      let cells = line.split('|').map(cell => cell.trim()).filter(cell => cell !== '')
       
-      // Skip the separator row (contains only --- or dashes)
-      const isSeparatorRow = cells.every(cell => /^\-+$/.test(cell))
+      // Skip if this is a separator row (all cells are dashes)
+      const isSeparator = cells.length > 0 && cells.every(cell => /^[\-\:]+$/.test(cell))
       
-      if (!isSeparatorRow && cells.length > 0) {
-        if (!inTable) {
-          inTable = true
-          tableRows.length = 0 // Reset
-        }
+      if (isSeparator) {
+        inTable = true
+        continue // Skip this row entirely
+      }
+      
+      if (cells.length > 0 && !isSeparator) {
+        inTable = true
         tableRows.push(cells)
       }
-    } else {
-      if (inTable) {
-        break // End of table
-      }
+    } else if (inTable) {
+      break
     }
   }
   
-  // Filter out any rows that are empty or only dashes
-  const validRows = tableRows.filter(row => row.length > 0 && !row.every(cell => /^\-+$/.test(cell)))
-  
-  return { isTable: validRows.length > 0, rows: validRows }
+  return { isTable: tableRows.length > 0, rows: tableRows }
 }
 
 export async function generateWordDocument({ blocks, styleId, templateName }: GenerateOptions): Promise<Blob> {
