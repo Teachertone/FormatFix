@@ -1,6 +1,5 @@
 'use client'
 
-import React from 'react'
 import type { ParsedDocument } from '@/lib/text-parser'
 import type { Template } from '@/lib/templates'
 import { applyStyle } from '@/lib/styles'
@@ -32,29 +31,41 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
     const elements: React.ReactNode[] = []
     let inTable = false
     let tableRows: string[][] = []
-    let listItems: React.ReactNode[] = []
-    let listType: 'bullet' | 'numbered' | null = null
+    let inList = false
+    let listItems: string[] = []
+    let listType: 'bullet' | 'numbered' = 'bullet'
     
-    const flushList = () => {
-      if (listItems.length > 0) {
-        if (listType === 'bullet') {
-          elements.push(<ul key={`list-${elements.length}`} className="my-2 space-y-1">{listItems}</ul>)
-        } else if (listType === 'numbered') {
-          elements.push(<ol key={`list-${elements.length}`} className="my-2 space-y-1">{listItems}</ol>)
-        }
-        listItems = []
-        listType = null
+    const renderList = () => {
+      if (listItems.length === 0) return
+      if (listType === 'bullet') {
+        elements.push(
+          <ul key={`ul-${elements.length}`} className="list-disc pl-6 my-2 space-y-1">
+            {listItems.map((item, idx) => <li key={idx} className="text-sm">{item}</li>)}
+          </ul>
+        )
+      } else {
+        elements.push(
+          <ol key={`ol-${elements.length}`} className="list-decimal pl-6 my-2 space-y-1">
+            {listItems.map((item, idx) => <li key={idx} className="text-sm">{item}</li>)}
+          </ol>
+        )
       }
+      listItems = []
+      inList = false
     }
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim()
+      if (line === '') {
+        renderList()
+        continue
+      }
       
-      // Check for table
+      // TABLE DETECTION
       if (line.startsWith('|') && line.endsWith('|')) {
-        flushList()
-        const cells = line.split('|').filter(cell => {
-          const clean = cell.trim()
+        renderList()
+        const cells = line.split('|').filter(c => {
+          const clean = c.trim()
           return clean !== '' && clean !== '---'
         })
         if (cells.length > 0) {
@@ -67,78 +78,82 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
         continue
       }
       
-      // If we were in a table, render it now
-      if (inTable && tableRows.length > 0) {
-        elements.push(
-          <div key={`table-${elements.length}`} className="overflow-x-auto my-4">
-            <table className="min-w-full border-collapse border border-border">
-              <tbody>
-                {tableRows.map((row, idx) => (
-                  <tr key={idx}>
-                    {row.map((cell, jdx) => (
-                      <td key={jdx} className="border border-border px-3 py-2">
-                        {cell.trim()}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )
+      // END OF TABLE
+      if (inTable) {
+        if (tableRows.length > 0) {
+          elements.push(
+            <div key={`table-${elements.length}`} className="overflow-x-auto my-4">
+              <table className="min-w-full border-collapse border border-border">
+                <tbody>
+                  {tableRows.map((row, ri) => (
+                    <tr key={ri}>
+                      {row.map((cell, ci) => (
+                        <td key={ci} className="border border-border px-3 py-2">{cell.trim()}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        }
         inTable = false
         tableRows = []
       }
       
-      // Check for bullet points
+      // BULLET POINTS
       if (line.startsWith('- ')) {
-        flushList()
+        renderList()
+        inList = true
         listType = 'bullet'
-        listItems.push(<li key={listItems.length} className="ml-4 list-disc text-sm">{line.slice(2)}</li>)
+        listItems.push(line.slice(2))
         continue
       }
       
-      // Check for numbered lists
-      const numberedMatch = line.match(/^\d+\. /)
+      // NUMBERED LISTS
+      const numberedMatch = line.match(/^\d+\. (.*)$/)
       if (numberedMatch) {
-        flushList()
+        renderList()
+        inList = true
         listType = 'numbered'
-        listItems.push(<li key={listItems.length} className="ml-4 list-decimal text-sm">{line.replace(/^\d+\. /, '')}</li>)
+        listItems.push(numberedMatch[1])
         continue
       }
       
-      // Not a list item, flush any pending list
-      flushList()
-      
-      // Headings
+      // HEADINGS
       if (line.startsWith('# ')) {
+        renderList()
         elements.push(<h1 key={elements.length} className="text-2xl font-bold mb-4">{line.slice(2)}</h1>)
-      } else if (line.startsWith('## ')) {
-        elements.push(<h2 key={elements.length} className="text-xl font-semibold mb-3">{line.slice(3)}</h2>)
-      } else if (line.startsWith('### ')) {
-        elements.push(<h3 key={elements.length} className="text-lg font-medium mb-2">{line.slice(4)}</h3>)
-      } else if (line) {
-        elements.push(<p key={elements.length} className="text-sm leading-relaxed mb-2">{line}</p>)
+        continue
       }
+      if (line.startsWith('## ')) {
+        renderList()
+        elements.push(<h2 key={elements.length} className="text-xl font-semibold mb-3">{line.slice(3)}</h2>)
+        continue
+      }
+      if (line.startsWith('### ')) {
+        renderList()
+        elements.push(<h3 key={elements.length} className="text-lg font-medium mb-2">{line.slice(4)}</h3>)
+        continue
+      }
+      
+      // PARAGRAPH
+      renderList()
+      elements.push(<p key={elements.length} className="text-sm leading-relaxed mb-2">{line}</p>)
     }
     
-    // Flush any remaining list
-    flushList()
-    
-    // Flush any remaining table
+    renderList()
     if (inTable && tableRows.length > 0) {
       elements.push(
         <div key={`table-${elements.length}`} className="overflow-x-auto my-4">
           <table className="min-w-full border-collapse border border-border">
             <tbody>
-              {tableRows.map((row, idx) => (
-                <tr key={idx}>
-                  {row.map((cell, jdx) => (
-                    <td key={jdx} className="border border-border px-3 py-2">
-                      {cell.trim()}
-                    </td>
+              {tableRows.map((row, ri) => (
+                <tr key={ri}>
+                  {row.map((cell, ci) => (
+                    <td key={ci} className="border border-border px-3 py-2">{cell.trim()}</td>
                   ))}
-                <tr>
+                </tr>
               ))}
             </tbody>
           </table>
