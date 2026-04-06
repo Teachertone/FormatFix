@@ -26,17 +26,31 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
   
   const styledMarkdown = applyStyle(markdownText, styleId)
   
-  // Simple table renderer
   const renderContent = () => {
     const lines = styledMarkdown.split('\n')
     const elements: React.ReactNode[] = []
     let inTable = false
     let tableRows: string[][] = []
+    let listItems: React.ReactNode[] = []
+    let listType: 'bullet' | 'numbered' | null = null
+    
+    const flushList = () => {
+      if (listItems.length > 0) {
+        const ListTag = listType === 'bullet' ? 'ul' : 'ol'
+        elements.push(
+          React.createElement(ListTag, { key: `list-${elements.length}`, className: "my-2 space-y-1" }, listItems)
+        )
+        listItems = []
+        listType = null
+      }
+    }
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim()
       
+      // Check for table
       if (line.startsWith('|') && line.endsWith('|')) {
+        flushList()
         const cells = line.split('|').filter(cell => {
           const clean = cell.trim()
           return clean !== '' && clean !== '---'
@@ -48,45 +62,68 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
           }
           tableRows.push(cells)
         }
-      } else {
-        if (inTable && tableRows.length > 0) {
-          elements.push(
-            <div key={`table-${elements.length}`} className="overflow-x-auto my-4">
-              <table className="min-w-full border-collapse border border-border">
-                <tbody>
-                  {tableRows.map((row, idx) => (
-                    <tr key={idx}>
-                      {row.map((cell, jdx) => (
-                        <td key={jdx} className="border border-border px-3 py-2">
-                          {cell.trim()}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )
-          inTable = false
-          tableRows = []
-        }
-        
-        if (line.startsWith('# ')) {
-          elements.push(<h1 key={elements.length} className="text-2xl font-bold mb-4">{line.slice(2)}</h1>)
-        } else if (line.startsWith('## ')) {
-          elements.push(<h2 key={elements.length} className="text-xl font-semibold mb-3">{line.slice(3)}</h2>)
-        } else if (line.startsWith('### ')) {
-          elements.push(<h3 key={elements.length} className="text-lg font-medium mb-2">{line.slice(4)}</h3>)
-        } else if (line.startsWith('- ')) {
-          elements.push(<li key={elements.length} className="ml-4 list-disc">{line.slice(2)}</li>)
-        } else if (line.match(/^\d+\. /)) {
-          elements.push(<li key={elements.length} className="ml-4 list-decimal">{line.replace(/^\d+\. /, '')}</li>)
-        } else if (line) {
-          elements.push(<p key={elements.length} className="text-sm leading-relaxed mb-2">{line}</p>)
-        }
+        continue
+      }
+      
+      // If we were in a table, render it now
+      if (inTable && tableRows.length > 0) {
+        elements.push(
+          <div key={`table-${elements.length}`} className="overflow-x-auto my-4">
+            <table className="min-w-full border-collapse border border-border">
+              <tbody>
+                {tableRows.map((row, idx) => (
+                  <tr key={idx}>
+                    {row.map((cell, jdx) => (
+                      <td key={jdx} className="border border-border px-3 py-2">
+                        {cell.trim()}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+        inTable = false
+        tableRows = []
+      }
+      
+      // Check for bullet points
+      if (line.startsWith('- ')) {
+        flushList()
+        listType = 'bullet'
+        listItems.push(<li key={listItems.length} className="ml-4 list-disc text-sm">{line.slice(2)}</li>)
+        continue
+      }
+      
+      // Check for numbered lists
+      const numberedMatch = line.match(/^\d+\. /)
+      if (numberedMatch) {
+        flushList()
+        listType = 'numbered'
+        listItems.push(<li key={listItems.length} className="ml-4 list-decimal text-sm">{line.replace(/^\d+\. /, '')}</li>)
+        continue
+      }
+      
+      // Not a list item, flush any pending list
+      flushList()
+      
+      // Headings
+      if (line.startsWith('# ')) {
+        elements.push(<h1 key={elements.length} className="text-2xl font-bold mb-4">{line.slice(2)}</h1>)
+      } else if (line.startsWith('## ')) {
+        elements.push(<h2 key={elements.length} className="text-xl font-semibold mb-3">{line.slice(3)}</h2>)
+      } else if (line.startsWith('### ')) {
+        elements.push(<h3 key={elements.length} className="text-lg font-medium mb-2">{line.slice(4)}</h3>)
+      } else if (line) {
+        elements.push(<p key={elements.length} className="text-sm leading-relaxed mb-2">{line}</p>)
       }
     }
     
+    // Flush any remaining list
+    flushList()
+    
+    // Flush any remaining table
     if (inTable && tableRows.length > 0) {
       elements.push(
         <div key={`table-${elements.length}`} className="overflow-x-auto my-4">
@@ -140,4 +177,4 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
       </div>
     </div>
   )
-}
+} 
