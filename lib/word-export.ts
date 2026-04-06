@@ -54,8 +54,8 @@ export async function generateWordDocument({ blocks, styleId, templateName }: Ge
         }
         numberedCount++
         lastWasNumbered = true
-        // Use bullet with custom text to mimic numbering (works and aligns with bullets)
-        children.push(new Paragraph({ text: `${numberedCount}. ${block.content}`, bullet: { level: 0 } }))
+        // Plain text with number — no bullet formatting
+        children.push(new Paragraph({ text: `${numberedCount}. ${block.content}` }))
         break
         
       default:
