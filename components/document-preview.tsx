@@ -1,7 +1,5 @@
 'use client'
 
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
 import type { ParsedDocument } from '@/lib/text-parser'
 import type { Template } from '@/lib/templates'
 import { applyStyle } from '@/lib/styles'
@@ -15,66 +13,101 @@ interface DocumentPreviewProps {
 }
 
 export function DocumentPreview({ document, template, styleId, colorHeadings }: DocumentPreviewProps) {
-  // Convert parsed blocks back to markdown text
   const markdownText = document.blocks.map(block => {
     switch (block.type) {
-      case 'heading1':
-        return `# ${block.content}`
-      case 'heading2':
-        return `## ${block.content}`
-      case 'heading3':
-        return `### ${block.content}`
-      case 'bullet':
-        return `- ${block.content}`
-      case 'numbered':
-        return `1. ${block.content}`
-      default:
-        return block.content
+      case 'heading1': return `# ${block.content}`
+      case 'heading2': return `## ${block.content}`
+      case 'heading3': return `### ${block.content}`
+      case 'bullet': return `- ${block.content}`
+      case 'numbered': return `1. ${block.content}`
+      default: return block.content
     }
   }).join('\n\n')
   
   const styledMarkdown = applyStyle(markdownText, styleId)
   
-  // Custom components for markdown rendering
-  const components = {
-    table: ({ children, ...props }: any) => (
-      <div className="overflow-x-auto my-4">
-        <table className="min-w-full border-collapse border border-border" {...props}>
-          {children}
-        </table>
-      </div>
-    ),
-    th: ({ children, ...props }: any) => (
-      <th className="border border-border px-3 py-2 bg-muted font-semibold" {...props}>
-        {children}
-      </th>
-    ),
-    td: ({ children, ...props }: any) => (
-      <td className="border border-border px-3 py-2" {...props}>
-        {children}
-      <td>
-    ),
-    h1: ({ children, ...props }: any) => (
-      <h1 className="text-2xl font-bold mb-4" style={colorHeadings ? { color: '#1E3A8A' } : undefined} {...props}>
-        {children}
-      </h1>
-    ),
-    h2: ({ children, ...props }: any) => (
-      <h2 className="text-xl font-semibold mb-3" style={colorHeadings ? { color: '#2563EB' } : undefined} {...props}>
-        {children}
-      </h2>
-    ),
-    h3: ({ children, ...props }: any) => (
-      <h3 className="text-lg font-medium mb-2" style={colorHeadings ? { color: '#3B82F6' } : undefined} {...props}>
-        {children}
-      </h3>
-    ),
-    ul: ({ children, ...props }: any) => <ul className="list-disc pl-6 my-2 space-y-1" {...props}>{children}</ul>,
-    ol: ({ children, ...props }: any) => <ol className="list-decimal pl-6 my-2 space-y-1" {...props}>{children}</ol>,
-    li: ({ children, ...props }: any) => <li className="text-sm" {...props}>{children}</li>,
-    p: ({ children, ...props }: any) => <p className="text-sm leading-relaxed mb-2" {...props}>{children}</p>,
-    strong: ({ children, ...props }: any) => <strong className="font-semibold" {...props}>{children}</strong>,
-    em: ({ children, ...props }: any) => <em className="italic" {...props}>{children}</em>,
+  // Simple table renderer
+  const renderContent = () => {
+    const lines = styledMarkdown.split('\n')
+    const elements: React.ReactNode[] = []
+    let inTable = false
+    let tableRows: string[][] = []
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim()
+      
+      if (line.startsWith('|') && line.endsWith('|')) {
+        const cells = line.split('|').filter(cell => {
+          const clean = cell.trim()
+          return clean !== '' && clean !== '---'
+        })
+        if (cells.length > 0) {
+          if (!inTable) {
+            inTable = true
+            tableRows = []
+          }
+          tableRows.push(cells)
+        }
+      } else {
+        if (inTable && tableRows.length > 0) {
+          elements.push(
+            <div key={`table-${elements.length}`} className="overflow-x-auto my-4">
+              <table className="min-w-full border-collapse border border-border">
+                <tbody>
+                  {tableRows.map((row, idx) => (
+                    <tr key={idx}>
+                      {row.map((cell, jdx) => (
+                        <td key={jdx} className="border border-border px-3 py-2">
+                          {cell.trim()}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+          inTable = false
+          tableRows = []
+        }
+        
+        if (line.startsWith('# ')) {
+          elements.push(<h1 key={elements.length} className="text-2xl font-bold mb-4">{line.slice(2)}</h1>)
+        } else if (line.startsWith('## ')) {
+          elements.push(<h2 key={elements.length} className="text-xl font-semibold mb-3">{line.slice(3)}</h2>)
+        } else if (line.startsWith('### ')) {
+          elements.push(<h3 key={elements.length} className="text-lg font-medium mb-2">{line.slice(4)}</h3>)
+        } else if (line.startsWith('- ')) {
+          elements.push(<li key={elements.length} className="ml-4 list-disc">{line.slice(2)}</li>)
+        } else if (line.match(/^\d+\. /)) {
+          elements.push(<li key={elements.length} className="ml-4 list-decimal">{line.replace(/^\d+\. /, '')}</li>)
+        } else if (line) {
+          elements.push(<p key={elements.length} className="text-sm leading-relaxed mb-2">{line}</p>)
+        }
+      }
+    }
+    
+    if (inTable && tableRows.length > 0) {
+      elements.push(
+        <div key={`table-${elements.length}`} className="overflow-x-auto my-4">
+          <table className="min-w-full border-collapse border border-border">
+            <tbody>
+              {tableRows.map((row, idx) => (
+                <tr key={idx}>
+                  {row.map((cell, jdx) => (
+                    <td key={jdx} className="border border-border px-3 py-2">
+                      {cell.trim()}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )
+    }
+    
+    return elements
   }
   
   if (document.blocks.length === 0) {
@@ -87,9 +120,7 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
             </svg>
           </div>
           <p className="text-sm font-medium text-foreground">Document Preview</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Paste text above to see a live preview
-          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Paste text above to see a live preview</p>
         </div>
       </div>
     )
@@ -98,26 +129,14 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
   return (
     <div className="rounded-lg border border-border bg-card shadow-sm">
       <div className="border-b border-border bg-muted/30 px-6 py-4">
-        <h1 className="text-xl font-bold text-foreground">
-          {template?.name || 'Document'}
-        </h1>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Applying "{styleId}" style
-        </p>
+        <h1 className="text-xl font-bold text-foreground">{template?.name || 'Document'}</h1>
+        <p className="mt-1 text-xs text-muted-foreground">Applying "{styleId}" style</p>
       </div>
-      
       <div className="max-h-[500px] overflow-y-auto px-6 py-6">
-        <div className="prose prose-sm max-w-none">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
-            {styledMarkdown}
-          </ReactMarkdown>
-        </div>
+        <div className="prose prose-sm max-w-none">{renderContent()}</div>
       </div>
-      
       <div className="border-t border-border bg-muted/30 px-6 py-3">
-        <p className="text-xs text-muted-foreground">
-          {document.blocks.length} blocks &bull; Ready to export
-        </p>
+        <p className="text-xs text-muted-foreground">{document.blocks.length} blocks &bull; Ready to export</p>
       </div>
     </div>
   )
