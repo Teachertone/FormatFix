@@ -35,45 +35,46 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
   
   const styledMarkdown = applyStyle(markdownText, styleId)
   
+  // Custom components for markdown rendering
   const components = {
-    h1: ({ children }: any) => (
-      <h1 className="text-2xl font-bold mb-4" style={colorHeadings ? { color: '#1E3A8A' } : undefined}>
-        {children}
-      </h1>
-    ),
-    h2: ({ children }: any) => (
-      <h2 className="text-xl font-semibold mb-3" style={colorHeadings ? { color: '#2563EB' } : undefined}>
-        {children}
-      </h2>
-    ),
-    h3: ({ children }: any) => (
-      <h3 className="text-lg font-medium mb-2" style={colorHeadings ? { color: '#3B82F6' } : undefined}>
-        {children}
-      </h3>
-    ),
-    table: ({ children }: any) => (
+    table: ({ children, ...props }: any) => (
       <div className="overflow-x-auto my-4">
-        <table className="min-w-full border-collapse border border-border">
+        <table className="min-w-full border-collapse border border-border" {...props}>
           {children}
         </table>
       </div>
     ),
-    th: ({ children }: any) => (
-      <th className="border border-border px-3 py-2 bg-muted font-semibold">
+    th: ({ children, ...props }: any) => (
+      <th className="border border-border px-3 py-2 bg-muted font-semibold" {...props}>
         {children}
       </th>
     ),
-    td: ({ children }: any) => (
-      <td className="border border-border px-3 py-2">
+    td: ({ children, ...props }: any) => (
+      <td className="border border-border px-3 py-2" {...props}>
         {children}
-      </td>
+      <td>
     ),
-    ul: ({ children }: any) => <ul className="list-disc pl-6 my-2 space-y-1">{children}</ul>,
-    ol: ({ children }: any) => <ol className="list-decimal pl-6 my-2 space-y-1">{children}</ol>,
-    li: ({ children }: any) => <li className="text-sm">{children}</li>,
-    p: ({ children }: any) => <p className="text-sm leading-relaxed mb-2">{children}</p>,
-    strong: ({ children }: any) => <strong className="font-semibold">{children}</strong>,
-    em: ({ children }: any) => <em className="italic">{children}</em>,
+    h1: ({ children, ...props }: any) => (
+      <h1 className="text-2xl font-bold mb-4" style={colorHeadings ? { color: '#1E3A8A' } : undefined} {...props}>
+        {children}
+      </h1>
+    ),
+    h2: ({ children, ...props }: any) => (
+      <h2 className="text-xl font-semibold mb-3" style={colorHeadings ? { color: '#2563EB' } : undefined} {...props}>
+        {children}
+      </h2>
+    ),
+    h3: ({ children, ...props }: any) => (
+      <h3 className="text-lg font-medium mb-2" style={colorHeadings ? { color: '#3B82F6' } : undefined} {...props}>
+        {children}
+      </h3>
+    ),
+    ul: ({ children, ...props }: any) => <ul className="list-disc pl-6 my-2 space-y-1" {...props}>{children}</ul>,
+    ol: ({ children, ...props }: any) => <ol className="list-decimal pl-6 my-2 space-y-1" {...props}>{children}</ol>,
+    li: ({ children, ...props }: any) => <li className="text-sm" {...props}>{children}</li>,
+    p: ({ children, ...props }: any) => <p className="text-sm leading-relaxed mb-2" {...props}>{children}</p>,
+    strong: ({ children, ...props }: any) => <strong className="font-semibold" {...props}>{children}</strong>,
+    em: ({ children, ...props }: any) => <em className="italic" {...props}>{children}</em>,
   }
   
   if (document.blocks.length === 0) {
