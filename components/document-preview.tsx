@@ -12,7 +12,14 @@ interface DocumentPreviewProps {
   onBlockUpdate: (blockId: string, newContent: string) => void
 }
 
-export function DocumentPreview({ document, template, styleId }: DocumentPreviewProps) {
+export function DocumentPreview({ document, template, styleId, colorHeadings }: DocumentPreviewProps) {
+  const renderFormattedText = (text: string) => {
+    let result = text
+    result = result.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    result = result.replace(/\*(.*?)\*/g, '<em>$1</em>')
+    return <span dangerouslySetInnerHTML={{ __html: result }} />
+  }
+  
   const renderBlocks = () => {
     const elements: React.ReactNode[] = []
     let numberedCount = 0
@@ -25,39 +32,34 @@ export function DocumentPreview({ document, template, styleId }: DocumentPreview
         case 'heading1':
           numberedCount = 0
           lastWasNumbered = false
-          elements.push(<h1 key={block.id} className="text-2xl font-bold mb-4">{content}</h1>)
+          elements.push(<h1 key={block.id} className="text-2xl font-bold mb-4" style={colorHeadings ? { color: '#1E3A8A' } : undefined}>{renderFormattedText(content)}</h1>)
           break
-          
         case 'heading2':
           numberedCount = 0
           lastWasNumbered = false
-          elements.push(<h2 key={block.id} className="text-xl font-semibold mb-3">{content}</h2>)
+          elements.push(<h2 key={block.id} className="text-xl font-semibold mb-3" style={colorHeadings ? { color: '#2563EB' } : undefined}>{renderFormattedText(content)}</h2>)
           break
-          
         case 'heading3':
           numberedCount = 0
           lastWasNumbered = false
-          elements.push(<h3 key={block.id} className="text-lg font-medium mb-2">{content}</h3>)
+          elements.push(<h3 key={block.id} className="text-lg font-medium mb-2" style={colorHeadings ? { color: '#3B82F6' } : undefined}>{renderFormattedText(content)}</h3>)
           break
-          
         case 'bullet':
           lastWasNumbered = false
-          elements.push(<p key={block.id} className="text-sm leading-relaxed mb-1">• {content}</p>)
+          elements.push(<p key={block.id} className="text-sm leading-relaxed mb-1">• {renderFormattedText(content)}</p>)
           break
-          
         case 'numbered':
           if (!lastWasNumbered) {
             numberedCount = 0
           }
           numberedCount++
           lastWasNumbered = true
-          elements.push(<p key={block.id} className="text-sm leading-relaxed mb-1">{numberedCount}. {content}</p>)
+          elements.push(<p key={block.id} className="text-sm leading-relaxed mb-1">{numberedCount}. {renderFormattedText(content)}</p>)
           break
-          
         default:
           numberedCount = 0
           lastWasNumbered = false
-          elements.push(<p key={block.id} className="text-sm leading-relaxed mb-2">{content}</p>)
+          elements.push(<p key={block.id} className="text-sm leading-relaxed mb-2">{renderFormattedText(content)}</p>)
       }
     }
     return elements
@@ -67,13 +69,7 @@ export function DocumentPreview({ document, template, styleId }: DocumentPreview
     return (
       <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-border bg-card p-8">
         <div className="text-center">
-          <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-            <svg className="h-6 w-6 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <p className="text-sm font-medium text-foreground">Document Preview</p>
-          <p className="mt-1 text-xs text-muted-foreground">Paste text above to see a live preview</p>
+          <p className="text-sm text-muted-foreground">Paste text above to see preview</p>
         </div>
       </div>
     )

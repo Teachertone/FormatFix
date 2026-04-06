@@ -30,25 +30,20 @@ export async function generateWordDocument({ blocks, styleId, templateName }: Ge
         lastWasNumbered = false
         children.push(new Paragraph({ text: block.content, heading: 'Heading1', spacing: { before: 240, after: 120 } }))
         break
-        
       case 'heading2':
         numberedCount = 0
         lastWasNumbered = false
         children.push(new Paragraph({ text: block.content, heading: 'Heading2', spacing: { before: 200, after: 80 } }))
         break
-        
       case 'heading3':
         numberedCount = 0
         lastWasNumbered = false
         children.push(new Paragraph({ text: block.content, heading: 'Heading3', spacing: { before: 160, after: 60 } }))
         break
-        
       case 'bullet':
         lastWasNumbered = false
-        // Use text bullet (•) instead of Word's native bullet
         children.push(new Paragraph({ text: `• ${block.content}` }))
         break
-        
       case 'numbered':
         if (!lastWasNumbered) {
           numberedCount = 0
@@ -57,7 +52,6 @@ export async function generateWordDocument({ blocks, styleId, templateName }: Ge
         lastWasNumbered = true
         children.push(new Paragraph({ text: `${numberedCount}. ${block.content}` }))
         break
-        
       default:
         numberedCount = 0
         lastWasNumbered = false
