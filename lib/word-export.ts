@@ -45,7 +45,8 @@ export async function generateWordDocument({ blocks, styleId, templateName }: Ge
         
       case 'bullet':
         lastWasNumbered = false
-        children.push(new Paragraph({ text: block.content, bullet: { level: 0 } }))
+        // Use text bullet (•) instead of Word's native bullet
+        children.push(new Paragraph({ text: `• ${block.content}` }))
         break
         
       case 'numbered':
@@ -54,7 +55,6 @@ export async function generateWordDocument({ blocks, styleId, templateName }: Ge
         }
         numberedCount++
         lastWasNumbered = true
-        // Plain text with number — no bullet formatting
         children.push(new Paragraph({ text: `${numberedCount}. ${block.content}` }))
         break
         
