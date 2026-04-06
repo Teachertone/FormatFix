@@ -21,37 +21,46 @@ export function downloadBlob(blob: Blob, filename: string) {
 export async function generateWordDocument({ blocks, styleId, templateName }: GenerateOptions): Promise<Blob> {
   const children: any[] = []
   let numberedCount = 0
+  let lastWasNumbered = false
   
-  for (let i = 0; i < blocks.length; i++) {
-    const block = blocks[i]
-    
+  for (const block of blocks) {
     switch (block.type) {
       case 'heading1':
         numberedCount = 0
+        lastWasNumbered = false
         children.push(new Paragraph({ text: block.content, heading: 'Heading1', spacing: { before: 240, after: 120 } }))
         break
         
       case 'heading2':
         numberedCount = 0
+        lastWasNumbered = false
         children.push(new Paragraph({ text: block.content, heading: 'Heading2', spacing: { before: 200, after: 80 } }))
         break
         
       case 'heading3':
         numberedCount = 0
+        lastWasNumbered = false
         children.push(new Paragraph({ text: block.content, heading: 'Heading3', spacing: { before: 160, after: 60 } }))
         break
         
       case 'bullet':
+        lastWasNumbered = false
         children.push(new Paragraph({ text: block.content, bullet: { level: 0 } }))
         break
         
       case 'numbered':
+        if (!lastWasNumbered) {
+          numberedCount = 0
+        }
         numberedCount++
-        children.push(new Paragraph({ text: `${numberedCount}. ${block.content}` }))
+        lastWasNumbered = true
+        // Use bullet with custom text to mimic numbering (works and aligns with bullets)
+        children.push(new Paragraph({ text: `${numberedCount}. ${block.content}`, bullet: { level: 0 } }))
         break
         
       default:
         numberedCount = 0
+        lastWasNumbered = false
         children.push(new Paragraph({ text: block.content, spacing: { after: 120 } }))
     }
   }
