@@ -99,8 +99,19 @@ function convertSpaceAlignedTable(text: string): string {
 export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   
+<<<<<<< HEAD
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     let text = e.clipboardData.getData('text/plain')
+=======
+const handlePaste = useCallback((e: React.ClipboardEvent) => {
+  const html = e.clipboardData.getData('text/html')
+  console.log('[v0] ===== FULL HTML =====')
+  console.log('[v0] HTML:', html)
+  
+  if (html) {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(html, 'text/html')
+>>>>>>> parent of 5bf8b10 (Update text-input.tsx)
     
     console.log('[v0] Pasted plain text:', text)
     
@@ -109,11 +120,60 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
       text = convertSpaceAlignedTable(text)
     }
     
+<<<<<<< HEAD
     if (text) {
     e.preventDefault()
     const existingText = value
     const newText = existingText ? existingText + '\n\n' + text : text
     onChange(newText)
+=======
+    switch (tag) {
+      case 'h1': return `\n# ${inner.trim()}\n\n`
+      case 'h2': return `\n## ${inner.trim()}\n\n`
+      case 'h3': return `\n### ${inner.trim()}\n\n`
+      case 'h4': return `\n#### ${inner.trim()}\n\n`
+      case 'h5': return `\n##### ${inner.trim()}\n\n`
+      case 'h6': return `\n###### ${inner.trim()}\n\n`
+      case 'p': return `${inner.trim()}\n\n`
+     case 'li': 
+  console.log("[v0] LI extracted (inner):", inner)  // <-- ADD THIS
+  const parent = el.parentElement
+  if (parent && parent.tagName.toLowerCase() === 'ol') {
+    return `1. ${inner.trim()}\n`
+  }
+  return `- ${inner.trim()}\n`
+      case 'strong':
+      case 'b': return `**${inner}**`
+      case 'em':
+      case 'i': return `*${inner}*`
+      case 'ul':
+      case 'ol': return `\n${inner}\n`
+      case 'br': return '\n'
+      case 'div': return `${inner}\n`
+      default: return inner
+    }
+  }
+  return ''
+}
+    
+    let markdown = htmlToMarkdown(doc.body)
+    markdown = markdown.replace(/\n{3,}/g, '\n\n').trim()
+    
+    console.log('[v0] Full markdown output:', markdown)
+    
+    if (markdown) {
+      const existingText = value
+      const newText = existingText ? existingText + '\n\n' + markdown : markdown
+      onChange(newText)
+      e.preventDefault()  // <-- THIS PREVENTS DUPLICATES
+      return              // <-- EXIT, DON'T PROCESS PLAIN TEXT
+    }
+  }
+  
+  // Fallback: if no HTML or conversion failed, use plain text
+  if (plainText) {
+    onChange(plainText)
+>>>>>>> parent of 5bf8b10 (Update text-input.tsx)
   }
 }, [value, onChange])
   
