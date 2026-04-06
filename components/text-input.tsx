@@ -110,12 +110,12 @@ export function TextInput({ value, onChange, onLoadExample }: TextInputProps) {
     }
     
     if (text) {
-      e.preventDefault()
-      const existingText = value
-      const newText = existingText ? existingText + '\n\n' + text : text
-      onChange(newText)
-    }
-  }, [value, onChange])
+    e.preventDefault()
+    const existingText = value
+    const newText = existingText ? existingText + '\n\n' + text : text
+    onChange(newText)
+  }
+}, [value, onChange])
   
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
