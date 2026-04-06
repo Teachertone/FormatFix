@@ -12,70 +12,54 @@ interface DocumentPreviewProps {
   onBlockUpdate: (blockId: string, newContent: string) => void
 }
 
-export function DocumentPreview({ document, template, styleId, colorHeadings }: DocumentPreviewProps) {
-  const renderFormattedText = (text: string) => {
-    // Simple formatting for now
-    return text
-  }
-  
+export function DocumentPreview({ document, template, styleId }: DocumentPreviewProps) {
   const renderBlocks = () => {
     const elements: React.ReactNode[] = []
-    let currentList: { type: 'bullet' | 'numbered'; items: string[] } | null = null
-    
-    const flushList = () => {
-      if (currentList) {
-        if (currentList.type === 'bullet') {
-          elements.push(
-            <ul key={`list-${elements.length}`} className="list-disc pl-6 my-2 space-y-1">
-              {currentList.items.map((item, i) => (
-                <li key={i} className="text-sm">{renderFormattedText(applyStyle(item, styleId))}</li>
-              ))}
-            </ul>
-          )
-        } else {
-          elements.push(
-            <ol key={`list-${elements.length}`} className="list-decimal pl-6 my-2 space-y-1">
-              {currentList.items.map((item, i) => (
-                <li key={i} className="text-sm">{renderFormattedText(applyStyle(item, styleId))}</li>
-              ))}
-            </ol>
-          )
-        }
-        currentList = null
-      }
-    }
+    let numberedCount = 0
+    let lastWasNumbered = false
     
     for (const block of document.blocks) {
       const content = applyStyle(block.content, styleId)
       
-      if (block.type === 'bullet') {
-        if (!currentList || currentList.type !== 'bullet') {
-          flushList()
-          currentList = { type: 'bullet', items: [content] }
-        } else {
-          currentList.items.push(content)
-        }
-      } else if (block.type === 'numbered') {
-        if (!currentList || currentList.type !== 'numbered') {
-          flushList()
-          currentList = { type: 'numbered', items: [content] }
-        } else {
-          currentList.items.push(content)
-        }
-      } else {
-        flushList()
-        if (block.type === 'heading1') {
+      switch (block.type) {
+        case 'heading1':
+          numberedCount = 0
+          lastWasNumbered = false
           elements.push(<h1 key={block.id} className="text-2xl font-bold mb-4">{content}</h1>)
-        } else if (block.type === 'heading2') {
+          break
+          
+        case 'heading2':
+          numberedCount = 0
+          lastWasNumbered = false
           elements.push(<h2 key={block.id} className="text-xl font-semibold mb-3">{content}</h2>)
-        } else if (block.type === 'heading3') {
+          break
+          
+        case 'heading3':
+          numberedCount = 0
+          lastWasNumbered = false
           elements.push(<h3 key={block.id} className="text-lg font-medium mb-2">{content}</h3>)
-        } else {
+          break
+          
+        case 'bullet':
+          lastWasNumbered = false
+          elements.push(<p key={block.id} className="text-sm leading-relaxed mb-1">• {content}</p>)
+          break
+          
+        case 'numbered':
+          if (!lastWasNumbered) {
+            numberedCount = 0
+          }
+          numberedCount++
+          lastWasNumbered = true
+          elements.push(<p key={block.id} className="text-sm leading-relaxed mb-1">{numberedCount}. {content}</p>)
+          break
+          
+        default:
+          numberedCount = 0
+          lastWasNumbered = false
           elements.push(<p key={block.id} className="text-sm leading-relaxed mb-2">{content}</p>)
-        }
       }
     }
-    flushList()
     return elements
   }
   
