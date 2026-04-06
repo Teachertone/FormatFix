@@ -13,154 +13,69 @@ interface DocumentPreviewProps {
 }
 
 export function DocumentPreview({ document, template, styleId, colorHeadings }: DocumentPreviewProps) {
-  const markdownText = document.blocks.map(block => {
-    switch (block.type) {
-      case 'heading1': return `# ${block.content}`
-      case 'heading2': return `## ${block.content}`
-      case 'heading3': return `### ${block.content}`
-      case 'bullet': return `- ${block.content}`
-      case 'numbered': return `1. ${block.content}`
-      default: return block.content
-    }
-  }).join('\n\n')
+  const renderFormattedText = (text: string) => {
+    // Simple formatting for now
+    return text
+  }
   
-  const styledMarkdown = applyStyle(markdownText, styleId)
-  
-  const renderContent = () => {
-    const lines = styledMarkdown.split('\n')
+  const renderBlocks = () => {
     const elements: React.ReactNode[] = []
-    let inTable = false
-    let tableRows: string[][] = []
-    let inList = false
-    let listItems: string[] = []
-    let listType: 'bullet' | 'numbered' = 'bullet'
+    let currentList: { type: 'bullet' | 'numbered'; items: string[] } | null = null
     
-    const renderList = () => {
-      if (listItems.length === 0) return
-      if (listType === 'bullet') {
-        elements.push(
-          <ul key={`ul-${elements.length}`} className="list-disc pl-6 my-2 space-y-1">
-            {listItems.map((item, idx) => <li key={idx} className="text-sm">{item}</li>)}
-          </ul>
-        )
-      } else {
-        elements.push(
-          <ol key={`ol-${elements.length}`} className="list-decimal pl-6 my-2 space-y-1">
-            {listItems.map((item, idx) => <li key={idx} className="text-sm">{item}</li>)}
-          </ol>
-        )
-      }
-      listItems = []
-      inList = false
-    }
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
-      if (line === '') {
-        renderList()
-        continue
-      }
-      
-      // TABLE DETECTION
-      if (line.startsWith('|') && line.endsWith('|')) {
-        renderList()
-        const cells = line.split('|').filter(c => {
-          const clean = c.trim()
-          return clean !== '' && clean !== '---'
-        })
-        if (cells.length > 0) {
-          if (!inTable) {
-            inTable = true
-            tableRows = []
-          }
-          tableRows.push(cells)
-        }
-        continue
-      }
-      
-      // END OF TABLE
-      if (inTable) {
-        if (tableRows.length > 0) {
+    const flushList = () => {
+      if (currentList) {
+        if (currentList.type === 'bullet') {
           elements.push(
-            <div key={`table-${elements.length}`} className="overflow-x-auto my-4">
-              <table className="min-w-full border-collapse border border-border">
-                <tbody>
-                  {tableRows.map((row, ri) => (
-                    <tr key={ri}>
-                      {row.map((cell, ci) => (
-                        <td key={ci} className="border border-border px-3 py-2">{cell.trim()}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ul key={`list-${elements.length}`} className="list-disc pl-6 my-2 space-y-1">
+              {currentList.items.map((item, i) => (
+                <li key={i} className="text-sm">{renderFormattedText(applyStyle(item, styleId))}</li>
+              ))}
+            </ul>
+          )
+        } else {
+          elements.push(
+            <ol key={`list-${elements.length}`} className="list-decimal pl-6 my-2 space-y-1">
+              {currentList.items.map((item, i) => (
+                <li key={i} className="text-sm">{renderFormattedText(applyStyle(item, styleId))}</li>
+              ))}
+            </ol>
           )
         }
-        inTable = false
-        tableRows = []
+        currentList = null
       }
-      
-      // BULLET POINTS
-      if (line.startsWith('- ')) {
-        renderList()
-        inList = true
-        listType = 'bullet'
-        listItems.push(line.slice(2))
-        continue
-      }
-      
-      // NUMBERED LISTS
-      const numberedMatch = line.match(/^\d+\. (.*)$/)
-      if (numberedMatch) {
-        renderList()
-        inList = true
-        listType = 'numbered'
-        listItems.push(numberedMatch[1])
-        continue
-      }
-      
-      // HEADINGS
-      if (line.startsWith('# ')) {
-        renderList()
-        elements.push(<h1 key={elements.length} className="text-2xl font-bold mb-4">{line.slice(2)}</h1>)
-        continue
-      }
-      if (line.startsWith('## ')) {
-        renderList()
-        elements.push(<h2 key={elements.length} className="text-xl font-semibold mb-3">{line.slice(3)}</h2>)
-        continue
-      }
-      if (line.startsWith('### ')) {
-        renderList()
-        elements.push(<h3 key={elements.length} className="text-lg font-medium mb-2">{line.slice(4)}</h3>)
-        continue
-      }
-      
-      // PARAGRAPH
-      renderList()
-      elements.push(<p key={elements.length} className="text-sm leading-relaxed mb-2">{line}</p>)
     }
     
-    renderList()
-    if (inTable && tableRows.length > 0) {
-      elements.push(
-        <div key={`table-${elements.length}`} className="overflow-x-auto my-4">
-          <table className="min-w-full border-collapse border border-border">
-            <tbody>
-              {tableRows.map((row, ri) => (
-                <tr key={ri}>
-                  {row.map((cell, ci) => (
-                    <td key={ci} className="border border-border px-3 py-2">{cell.trim()}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )
+    for (const block of document.blocks) {
+      const content = applyStyle(block.content, styleId)
+      
+      if (block.type === 'bullet') {
+        if (!currentList || currentList.type !== 'bullet') {
+          flushList()
+          currentList = { type: 'bullet', items: [content] }
+        } else {
+          currentList.items.push(content)
+        }
+      } else if (block.type === 'numbered') {
+        if (!currentList || currentList.type !== 'numbered') {
+          flushList()
+          currentList = { type: 'numbered', items: [content] }
+        } else {
+          currentList.items.push(content)
+        }
+      } else {
+        flushList()
+        if (block.type === 'heading1') {
+          elements.push(<h1 key={block.id} className="text-2xl font-bold mb-4">{content}</h1>)
+        } else if (block.type === 'heading2') {
+          elements.push(<h2 key={block.id} className="text-xl font-semibold mb-3">{content}</h2>)
+        } else if (block.type === 'heading3') {
+          elements.push(<h3 key={block.id} className="text-lg font-medium mb-2">{content}</h3>)
+        } else {
+          elements.push(<p key={block.id} className="text-sm leading-relaxed mb-2">{content}</p>)
+        }
+      }
     }
-    
+    flushList()
     return elements
   }
   
@@ -187,7 +102,7 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
         <p className="mt-1 text-xs text-muted-foreground">Applying "{styleId}" style</p>
       </div>
       <div className="max-h-[500px] overflow-y-auto px-6 py-6">
-        <div className="prose prose-sm max-w-none">{renderContent()}</div>
+        <div className="prose prose-sm max-w-none">{renderBlocks()}</div>
       </div>
       <div className="border-t border-border bg-muted/30 px-6 py-3">
         <p className="text-xs text-muted-foreground">{document.blocks.length} blocks &bull; Ready to export</p>
