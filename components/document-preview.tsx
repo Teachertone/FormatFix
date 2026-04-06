@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import type { ParsedDocument } from '@/lib/text-parser'
 import type { Template } from '@/lib/templates'
 import { applyStyle } from '@/lib/styles'
@@ -36,10 +37,11 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
     
     const flushList = () => {
       if (listItems.length > 0) {
-        const ListTag = listType === 'bullet' ? 'ul' : 'ol'
-        elements.push(
-          React.createElement(ListTag, { key: `list-${elements.length}`, className: "my-2 space-y-1" }, listItems)
-        )
+        if (listType === 'bullet') {
+          elements.push(<ul key={`list-${elements.length}`} className="my-2 space-y-1">{listItems}</ul>)
+        } else if (listType === 'numbered') {
+          elements.push(<ol key={`list-${elements.length}`} className="my-2 space-y-1">{listItems}</ol>)
+        }
         listItems = []
         listType = null
       }
@@ -136,7 +138,7 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
                       {cell.trim()}
                     </td>
                   ))}
-                </tr>
+                <tr>
               ))}
             </tbody>
           </table>
@@ -177,4 +179,4 @@ export function DocumentPreview({ document, template, styleId, colorHeadings }: 
       </div>
     </div>
   )
-} 
+}
