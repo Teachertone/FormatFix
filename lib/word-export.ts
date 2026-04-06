@@ -1,4 +1,4 @@
-import { Packer, Document, Paragraph, Indent } from 'docx'
+import { Packer, Document, Paragraph } from 'docx'
 import type { ParsedBlock } from './text-parser'
 
 interface GenerateOptions {
@@ -42,20 +42,12 @@ export async function generateWordDocument({ blocks, styleId, templateName }: Ge
         break
         
       case 'bullet':
-        // Use Word's bullet with custom indent to match numbers
-        children.push(new Paragraph({
-          text: block.content,
-          bullet: { level: 0 },
-          indent: { left: 360, hanging: 360 }
-        }))
+        children.push(new Paragraph({ text: block.content, bullet: { level: 0 } }))
         break
         
       case 'numbered':
         numberedCount++
-        children.push(new Paragraph({
-          text: `${numberedCount}. ${block.content}`,
-          indent: { left: 360, hanging: 360 }
-        }))
+        children.push(new Paragraph({ text: `${numberedCount}. ${block.content}` }))
         break
         
       default:
